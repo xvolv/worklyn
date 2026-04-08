@@ -6,7 +6,13 @@ const LandingPageFooter = () => {
     <footer className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
       <div className="flex items-center gap-3">
         <Link href="/">
-          <Image src="/logos/logo.svg" alt="Worklyn" width={100} height={100} />
+          <Image
+            src="/logos/logo.svg"
+            alt="Worklyn"
+            width={96}
+            height={56}
+            className="h-10 w-auto"
+          />
         </Link>
         <span className="hidden h-3 w-px bg-border sm:inline-block" />
         <span>© 2026 Worklyn Inc. All rights reserved.</span>

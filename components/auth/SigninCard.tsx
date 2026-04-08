@@ -42,10 +42,16 @@ const SigninCard = () => {
   return (
     <div className="rounded-1xl bg-card p-6 ring-1 ring-border sm:p-8">
       <div className="flex flex-col items-center text-center">
-        <div className=" inline-flex h-24 w-24 items-center justify-center ">
-            <Link href="/">
-              <Image src="/logos/logo.svg" alt="Worklyn" width={120} height={120} />
-            </Link>
+        <div className="inline-flex h-24 items-center justify-center">
+          <Link href="/">
+            <Image
+              src="/logos/logo.svg"
+              alt="Worklyn"
+              width={96}
+              height={96}
+              className="h-24 w-auto"
+            />
+          </Link>
         </div>
 
         <p className="mt-1 text-sm text-muted-foreground">
@@ -95,7 +101,7 @@ const SigninCard = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="h-11 w-full rounded-none border border-input bg-background pl-11 pr-12 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-              placeholder="••••••••"
+              placeholder="********"
               autoComplete="current-password"
               required
             />
@@ -150,7 +156,7 @@ const SigninCard = () => {
         <Button
           type="button"
           variant="outline"
-          className="h-11 w-full rounded-none bg-muted/60 hover:bg-muted"
+          className="h-11 w-full rounded-none bg-muted/60 hover:bg-muted hover:cursor-pointer"
           disabled={loading}
         >
           <FcGoogle className="mr-2 h-5 w-5" />

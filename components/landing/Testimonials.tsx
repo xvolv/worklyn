@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { testimonials } from "@/components/landing/testimonialsData";
 
 const SLIDE_DURATION_MS = 850;
@@ -13,17 +14,25 @@ const TestimonialCard = ({
   quote,
   name,
   title,
+  avatarSrc,
 }: {
   quote: string;
   name: string;
   title: string;
+  avatarSrc: string;
 }) => {
   return (
     <div className="p-6">
       <p className="text-sm leading-6 text-foreground/80">“{quote}”</p>
 
       <div className="mt-6 flex items-center gap-3">
-        <div className="h-10 w-10 rounded-full bg-muted" />
+        <Image
+          src={avatarSrc}
+          alt={name}
+          width={40}
+          height={40}
+          className="h-10 w-10 rounded-full object-cover"
+        />
         <div className="leading-tight">
           <div className="text-sm font-medium">{name}</div>
           <div className="text-xs text-muted-foreground">{title}</div>
@@ -122,7 +131,7 @@ const Testimonials = () => {
   }, []);
 
   return (
-    <div className="max-w-xl pt-8">
+    <div className="max-w-xl pt-8 hover:cursor-pointer">
       <div
         className="relative overflow-hidden rounded-none bg-card shadow-sm ring-1 ring-border"
         onPointerEnter={() => setHovered(true)}
@@ -148,6 +157,7 @@ const Testimonials = () => {
               quote={active.quote}
               name={active.name}
               title={active.title}
+              avatarSrc={active.avatarSrc}
             />
           </div>
           <div className="w-1/2">
@@ -155,6 +165,7 @@ const Testimonials = () => {
               quote={incoming.quote}
               name={incoming.name}
               title={incoming.title}
+              avatarSrc={incoming.avatarSrc}
             />
           </div>
         </div>
@@ -164,6 +175,7 @@ const Testimonials = () => {
             quote={active.quote}
             name={active.name}
             title={active.title}
+            avatarSrc={active.avatarSrc}
           />
         </div>
       </div>

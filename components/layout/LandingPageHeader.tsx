@@ -12,9 +12,9 @@ const LandingPageHeader = () => {
           <Image
             src="/logos/logo.svg"
             alt="Worklyn"
-            width={100}
-            height={100}
-            className="h-14 w-24"
+            width={56}
+            height={32}
+            className="h-10 w-auto"
             priority
           />
         </Link>
