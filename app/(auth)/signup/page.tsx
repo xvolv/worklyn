@@ -1,9 +1,9 @@
-//signup page
 import Link from "next/link";
+import SignupCard from "@/components/auth/SignupCard";
 const SignupPage = () => {
   return (
     <div>
-      SignupPage
+      <SignupCard />
       <Link href="/signin">Signin</Link>
     </div>
   );

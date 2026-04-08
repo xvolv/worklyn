@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 const SigninPage = () => {
   return (
     <div>
-      SigninPage
-      <Link href="/signup">Signup</Link>
+      <Button>
+        <Link href="/signup">Signup</Link>
+      </Button>
     </div>
   );
 };
