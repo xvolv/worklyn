@@ -1,4 +1,4 @@
-import SignupCard from "@/app/(auth)/signup/page";
+import SignupCard from "@/components/auth/SignupCard";
 import Header from "@/components/layout/LandingPageHeader";
 import LandingPageFooter from "@/components/layout/LandingPageFooter";
 import LandingHero from "@/components/landing/Hero";

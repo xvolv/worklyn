@@ -4,7 +4,7 @@ import Image from "next/image";
 const LandingPageHeader = () => {
   return (
     <header className="w-full">
-      <nav className="mx-auto flex w-full max-w-8xl items-center justify-between px-4 py-2 sm:px-6">
+      <nav className="mx-auto flex w-full max-w-[1400px] items-center justify-between px-4 py-4 sm:px-6">
         <Link
           href="/"
           className="flex items-center gap-2 font-semibold tracking-tight"
@@ -14,7 +14,7 @@ const LandingPageHeader = () => {
             alt="Worklyn"
             width={100}
             height={100}
-            className="h-12 w-24"
+            className="h-14 w-24"
             priority
           />
         </Link>

@@ -6,7 +6,7 @@ const LandingPageFooter = () => {
       <div className="flex items-center gap-3">
         <Image src="/logos/logo.svg" alt="Worklyn" width={100} height={100} />
         <span className="hidden h-3 w-px bg-border sm:inline-block" />
-        <span>© 2024 Worklyn Inc. All rights reserved.</span>
+        <span>© 2026 Worklyn Inc. All rights reserved.</span>
       </div>
 
       <div className="flex flex-wrap gap-x-8 gap-y-2">
