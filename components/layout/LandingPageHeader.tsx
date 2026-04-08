@@ -3,7 +3,7 @@ import Image from "next/image";
 
 const LandingPageHeader = () => {
   return (
-    <header className="w-full">
+    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur">
       <nav className="mx-auto flex w-full max-w-[1400px] items-center justify-between px-4 py-4 sm:px-6">
         <Link
           href="/"
