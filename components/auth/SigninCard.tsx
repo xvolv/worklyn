@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { authClient } from "@/lib/auth/auth-client";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 const SigninCard = () => {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,6 +19,20 @@ const SigninCard = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const passwordType = showPassword ? "text" : "password";
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setGeneralError("");
+    try {
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/dashboard", // Where to send them after a successful sign-in
+      });
+    } catch (error) {
+      setGeneralError("Failed to sign in with Google. Please try again.");
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,9 +46,19 @@ const SigninCard = () => {
     setLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      console.log("Signin data:", { email, password, rememberMe });
-      alert("Logged in successfully! (Demo)");
+      const { error } = await authClient.signIn.email({
+        email,
+        password,
+        rememberMe,
+      });
+      if (error) {
+        setGeneralError(
+          error.message || "Something went wrong. Please try again.",
+        );
+        return;
+      }
+      router.push("/dashboard");
+      router.refresh();
     } catch {
       setGeneralError("Something went wrong. Please try again.");
     } finally {
@@ -43,9 +70,14 @@ const SigninCard = () => {
     <div className="rounded-1xl bg-card p-6 ring-1 ring-border sm:p-8">
       <div className="flex flex-col items-center text-center">
         <div className=" inline-flex h-24 w-24 items-center justify-center ">
-            <Link href="/">
-              <Image src="/logos/logo.svg" alt="Worklyn" width={120} height={120} />
-            </Link>
+          <Link href="/">
+            <Image
+              src="/logos/logo.svg"
+              alt="Worklyn"
+              width={120}
+              height={120}
+            />
+          </Link>
         </div>
 
         <p className="mt-1 text-sm text-muted-foreground">
@@ -95,7 +127,7 @@ const SigninCard = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="h-11 w-full rounded-none border border-input bg-background pl-11 pr-12 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-              placeholder="••••••••"
+              placeholder="********"
               autoComplete="current-password"
               required
             />
@@ -152,6 +184,7 @@ const SigninCard = () => {
           variant="outline"
           className="h-11 w-full rounded-none bg-muted/60 hover:bg-muted"
           disabled={loading}
+          onClick={handleGoogleSignIn}
         >
           <FcGoogle className="mr-2 h-5 w-5" />
           Continue with Google

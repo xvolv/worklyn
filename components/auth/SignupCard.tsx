@@ -1,12 +1,16 @@
 "use client";
+import { useRouter } from "next/navigation";
 
 import { useState } from "react";
+//import authClient the browser butler
+import { authClient } from "@/lib/auth/auth-client";
 import Link from "next/link";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { Button } from "@/components/ui/button";
 
 const SignupCard = () => {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -37,7 +41,11 @@ const SignupCard = () => {
     if (newPassword) {
       if (newPassword.length < 8) {
         setPasswordStrengthError("Password must be at least 8 characters long");
-      } else if (!/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword) || !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)) {
+      } else if (
+        !/[A-Za-z]/.test(newPassword) ||
+        !/\d/.test(newPassword) ||
+        !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)
+      ) {
         setPasswordStrengthError(
           "Password must contain letters, numbers, and special characters",
         );
@@ -61,6 +69,19 @@ const SignupCard = () => {
     setConfirmPassword(value);
     validatePassword(password, value);
   };
+  const handleGoogleSignUp = async () => {
+    setLoading(true);
+    setGeneralError("");
+    try {
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/dashboard", // Where to send them after a successful sign-in
+      });
+    } catch (error) {
+      setGeneralError("Failed to sign up with Google. Please try again.");
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,9 +101,21 @@ const SignupCard = () => {
     setLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log("Signup data:", { fullName, email, password });
-      alert("Account created successfully! (Demo)");
+      // butler knockig the pathes
+      const { error } = await authClient.signUp.email({
+        email,
+        name: fullName,
+        password,
+      });
+
+      if (error) {
+        setGeneralError(
+          error.message || "Something went wrong. Please try again.",
+        );
+        return; // Stop here if there's an error
+      }
+      router.push("/dashboard");
+      router.refresh();
     } catch (error) {
       setGeneralError("Something went wrong. Please try again.");
     } finally {
@@ -254,6 +287,7 @@ const SignupCard = () => {
           variant="outline"
           className="h-11 w-full rounded-none bg-muted/60 hover:bg-muted"
           disabled={loading}
+          onClick={handleGoogleSignUp}
         >
           <FcGoogle className="mr-2 h-5 w-5" />
           Sign up with Google
