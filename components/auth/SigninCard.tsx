@@ -29,9 +29,27 @@ const SigninCard = () => {
     setLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      console.log("Signin data:", { email, password, rememberMe });
-      alert("Logged in successfully! (Demo)");
+      const res = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          rememberMe,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setGeneralError(data.error || "Invalid email or password");
+        return;
+      }
+
+      localStorage.setItem("accessToken", data.accessToken);
+      localStorage.setItem("refreshToken", data.refreshToken);
+      
+      window.location.href = "/dashboard";
     } catch {
       setGeneralError("Something went wrong. Please try again.");
     } finally {
@@ -47,9 +65,9 @@ const SigninCard = () => {
             <Image
               src="/logos/logo.svg"
               alt="Worklyn"
-              width={96}
-              height={96}
-              className="h-24 w-auto"
+              width={32}
+              height={32}
+              className="h-16 w-auto"
             />
           </Link>
         </div>

@@ -66,7 +66,6 @@ const SignupCard = () => {
     e.preventDefault();
     setGeneralError("");
 
-    // Final validation
     if (!fullName.trim() || !email.trim() || !password || !confirmPassword) {
       setGeneralError("Please fill in all fields");
       return;
@@ -80,9 +79,28 @@ const SignupCard = () => {
     setLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log("Signup data:", { fullName, email, password });
-      alert("Account created successfully! (Demo)");
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: fullName,
+          email,
+          password,
+          confirmPassword,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setGeneralError(data.error || "Something went wrong");
+        return;
+      }
+
+      localStorage.setItem("accessToken", data.accessToken);
+      localStorage.setItem("refreshToken", data.refreshToken);
+      
+      window.location.href = "/dashboard";
     } catch (error) {
       setGeneralError("Something went wrong. Please try again.");
     } finally {
