@@ -149,3 +149,19 @@
 .animation-delay-300 { animation-delay: 240ms; }
 .animation-delay-400 { animation-delay: 320ms; }
 .animation-delay-500 { animation-delay: 400ms; }
+
+/* Modal entrance */
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-modal-in {
+  animation: modalIn 0.2s ease-out both;
+}

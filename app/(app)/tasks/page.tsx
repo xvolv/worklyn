@@ -1,7 +1,18 @@
-import TasksPageClient from "@/components/tasks/TasksPageClient";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { prisma } from "@/lib/prisma";
 
-const TasksPage = () => {
-  return <TasksPageClient />;
-};
+export default async function TasksRedirect() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) redirect("/signin");
 
-export default TasksPage;
+  const membership = await prisma.workspaceMember.findFirst({
+    where: { userId: session.user.id },
+    include: { workspace: { select: { slug: true } } },
+    orderBy: { joinedAt: "asc" },
+  });
+
+  if (!membership) redirect("/workspace/new");
+  redirect(`/w/${membership.workspace.slug}/tasks`);
+}

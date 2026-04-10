@@ -1,91 +1,37 @@
 import { MoreHorizontal } from "lucide-react";
+import type { ActivityItem } from "./DashboardClient";
 
-const activities = [
-  {
-    type: "task",
-    typeBadge: "Task",
-    typeBadgeColor: "bg-indigo-50 text-indigo-600",
-    avatar: "alex",
-    content: (
-      <>
-        <span className="font-semibold text-foreground">Alex</span> completed{" "}
-        <span className="font-medium text-foreground">&quot;Mobile Login&quot;</span> component
-      </>
-    ),
-    time: "2 mins ago",
-  },
-  {
-    type: "project",
-    typeBadge: "Project",
-    typeBadgeColor: "bg-amber-50 text-amber-600",
-    avatar: "sarah",
-    content: (
-      <>
-        <span className="font-semibold text-foreground">Sarah M.</span> created project{" "}
-        <span className="font-medium text-foreground">&quot;Q3 Strategy&quot;</span>
-      </>
-    ),
-    time: "45 mins ago",
-  },
-  {
-    type: "comment",
-    typeBadge: "Comment",
-    typeBadgeColor: "bg-sky-50 text-sky-600",
-    avatar: "jordan",
-    content: (
-      <>
-        <span className="font-semibold text-foreground">Jordan</span> commented on{" "}
-        <span className="font-medium text-foreground">Asset #442</span>
-      </>
-    ),
-    time: "3 hours ago",
-    quote:
-      '"The contrast ratio needs to be at least 4.5:1 for accessibility."',
-  },
-  {
-    type: "system",
-    typeBadge: "System",
-    typeBadgeColor: "bg-emerald-50 text-emerald-600",
-    avatar: "system",
-    content: (
-      <>
-        <span className="font-medium text-foreground">Weekly Summary</span> report generated
-        automatically
-      </>
-    ),
-    time: "5 hours ago",
-  },
-  {
-    type: "deploy",
-    typeBadge: "Deploy",
-    typeBadgeColor: "bg-purple-50 text-purple-600",
-    avatar: "maya",
-    content: (
-      <>
-        <span className="font-semibold text-foreground">Maya R.</span> deployed{" "}
-        <span className="font-medium text-foreground">v2.4.1</span> to production
-      </>
-    ),
-    time: "Yesterday",
-  },
-  {
-    type: "task",
-    typeBadge: "Task",
-    typeBadgeColor: "bg-indigo-50 text-indigo-600",
-    avatar: "cameron",
-    content: (
-      <>
-        <span className="font-semibold text-foreground">Cameron</span> moved{" "}
-        <span className="font-medium text-foreground">&quot;Auth Flow&quot;</span> to review
-      </>
-    ),
-    time: "Yesterday",
-  },
-];
+const typeBadgeConfig: Record<string, { label: string; color: string }> = {
+  TASK_COMPLETED: { label: "Task", color: "bg-indigo-50 text-indigo-600" },
+  PROJECT_CREATED: { label: "Project", color: "bg-amber-50 text-amber-600" },
+  COMMENT: { label: "Comment", color: "bg-sky-50 text-sky-600" },
+  DEPLOY: { label: "Deploy", color: "bg-purple-50 text-purple-600" },
+  SYSTEM: { label: "System", color: "bg-emerald-50 text-emerald-600" },
+};
 
-const RecentActivity = () => {
+function timeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+interface RecentActivityProps {
+  data: ActivityItem[];
+}
+
+const RecentActivity = ({ data }: RecentActivityProps) => {
   return (
-    <div className="rounded-xl border border-border bg-white p-5 shadow-sm animate-fade-in-up animation-delay-400">
+    <div className="rounded-none border border-border bg-white p-5  animate-fade-in-up animation-delay-400">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-foreground">Recent Activity</h2>
@@ -96,43 +42,53 @@ const RecentActivity = () => {
 
       {/* Activity List */}
       <div className="mt-4 space-y-0">
-        {activities.map((activity, i) => (
-          <div
-            key={i}
-            className="group flex gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-muted/40"
-          >
-            {/* Avatar */}
-            <img
-              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${activity.avatar}`}
-              alt=""
-              className="h-8 w-8 shrink-0 rounded-full bg-muted"
-            />
+        {data.map((activity) => {
+          const badge = typeBadgeConfig[activity.type] ?? {
+            label: activity.type,
+            color: "bg-gray-50 text-gray-600",
+          };
+          const avatarSeed = activity.userEmail || activity.userName;
 
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-[13px] leading-relaxed text-muted-foreground">
-                  {activity.content}
-                </p>
-                <span
-                  className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${activity.typeBadgeColor}`}
-                >
-                  {activity.typeBadge}
-                </span>
-              </div>
-              <p className="mt-0.5 text-[11px] text-muted-foreground/60">
-                {activity.time}
-              </p>
-              {activity.quote && (
-                <div className="mt-1.5 rounded-md border border-border bg-muted/30 px-2.5 py-1.5">
-                  <p className="text-[11px] italic leading-relaxed text-muted-foreground">
-                    {activity.quote}
+          return (
+            <div
+              key={activity.id}
+              className="group flex gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-muted/40"
+            >
+              {/* Avatar */}
+              <img
+                src={
+                  activity.userImage ||
+                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}`
+                }
+                alt=""
+                className="h-8 w-8 shrink-0 rounded-full bg-muted"
+              />
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-[13px] leading-relaxed text-muted-foreground">
+                    <span className="font-semibold text-foreground">
+                      {activity.userName}
+                    </span>{" "}
+                    {activity.description}
                   </p>
+                  <span
+                    className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${badge.color}`}
+                  >
+                    {badge.label}
+                  </span>
                 </div>
-              )}
+                <p className="mt-0.5 text-[11px] text-muted-foreground/60">
+                  {timeAgo(activity.createdAt)}
+                  {activity.projectName && (
+                    <> · {activity.projectName}</>
+                  )}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Load More */}

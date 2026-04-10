@@ -1,7 +1,18 @@
-import ProjectBoard from "@/components/dashboard/ProjectBoard";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { prisma } from "@/lib/prisma";
 
-const ProjectsPage = () => {
-  return <ProjectBoard />;
-};
+export default async function ProjectsRedirect() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) redirect("/signin");
 
-export default ProjectsPage;
+  const membership = await prisma.workspaceMember.findFirst({
+    where: { userId: session.user.id },
+    include: { workspace: { select: { slug: true } } },
+    orderBy: { joinedAt: "asc" },
+  });
+
+  if (!membership) redirect("/workspace/new");
+  redirect(`/w/${membership.workspace.slug}/projects`);
+}

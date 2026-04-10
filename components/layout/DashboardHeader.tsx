@@ -15,7 +15,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSidebar } from "./SidebarContext";
 
-const DashboardHeader = () => {
+interface DashboardHeaderProps {
+  invitationCount?: number;
+}
+
+const DashboardHeader = ({ invitationCount = 0 }: DashboardHeaderProps) => {
   const router = useRouter();
   const { data: session } = useSession();
   const { isOpen, toggle } = useSidebar();
@@ -57,7 +61,11 @@ const DashboardHeader = () => {
       <div className="flex items-center gap-3">
         <button className="relative rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <Bell className="h-5 w-5" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+          {invitationCount > 0 && (
+            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+              {invitationCount}
+            </span>
+          )}
         </button>
         <button className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <MessageSquare className="h-5 w-5" />

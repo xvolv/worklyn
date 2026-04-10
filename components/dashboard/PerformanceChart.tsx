@@ -10,40 +10,11 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import type { PerformanceDataPoint } from "./DashboardClient";
+import { useWorkspace } from "@/components/layout/WorkspaceContext";
 
-const dailyData = [
-  { day: "Mon", tasks: 12, completed: 8 },
-  { day: "Tue", tasks: 18, completed: 14 },
-  { day: "Wed", tasks: 15, completed: 12 },
-  { day: "Thu", tasks: 22, completed: 18 },
-  { day: "Fri", tasks: 28, completed: 24 },
-  { day: "Sat", tasks: 14, completed: 10 },
-  { day: "Sun", tasks: 8, completed: 6 },
-];
-
-const weeklyData = [
-  { day: "Week 1", tasks: 68, completed: 52 },
-  { day: "Week 2", tasks: 85, completed: 70 },
-  { day: "Week 3", tasks: 74, completed: 62 },
-  { day: "Week 4", tasks: 92, completed: 80 },
-];
-
-const monthlyData = [
-  { day: "Jan", tasks: 280, completed: 220 },
-  { day: "Feb", tasks: 310, completed: 265 },
-  { day: "Mar", tasks: 295, completed: 240 },
-  { day: "Apr", tasks: 340, completed: 290 },
-  { day: "May", tasks: 320, completed: 280 },
-  { day: "Jun", tasks: 360, completed: 310 },
-];
-
-const ranges = [
-  { key: "7D", label: "7D", data: dailyData },
-  { key: "30D", label: "30D", data: weeklyData },
-  { key: "90D", label: "90D", data: monthlyData },
-] as const;
-
-type RangeKey = (typeof ranges)[number]["key"];
+const ranges = ["7D", "30D", "90D"] as const;
+type RangeKey = (typeof ranges)[number];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -55,21 +26,46 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           <span className="inline-block h-2 w-2 rounded-full bg-indigo-500 mr-1.5" />
           Tasks: <span className="font-semibold">{payload[0]?.value}</span>
         </p>
-        <p className="text-xs">
-          <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 mr-1.5" />
-          Done: <span className="font-semibold">{payload[1]?.value}</span>
-        </p>
+        {payload[1] && (
+          <p className="text-xs">
+            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 mr-1.5" />
+            Done: <span className="font-semibold">{payload[1]?.value}</span>
+          </p>
+        )}
       </div>
     </div>
   );
 };
 
-const PerformanceChart = () => {
+interface PerformanceChartProps {
+  initialData: PerformanceDataPoint[];
+}
+
+const PerformanceChart = ({ initialData }: PerformanceChartProps) => {
+  const workspace = useWorkspace();
   const [activeRange, setActiveRange] = useState<RangeKey>("7D");
-  const currentData = ranges.find((r) => r.key === activeRange)!.data;
+  const [chartData, setChartData] = useState<PerformanceDataPoint[]>(initialData);
+  const [loading, setLoading] = useState(false);
+
+  const handleRangeChange = async (range: RangeKey) => {
+    if (range === activeRange) return;
+    setActiveRange(range);
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/dashboard/performance?range=${range}&workspaceId=${workspace.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setChartData(data);
+      }
+    } catch {
+      // Keep current data on error
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="rounded-xl border border-border bg-white p-5 shadow-sm animate-fade-in-up animation-delay-400">
+    <div className="rounded-none border border-border bg-white p-5  animate-fade-in-up animation-delay-400">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -81,24 +77,24 @@ const PerformanceChart = () => {
         <div className="flex rounded-lg border border-border p-0.5">
           {ranges.map((r) => (
             <button
-              key={r.key}
-              onClick={() => setActiveRange(r.key)}
+              key={r}
+              onClick={() => handleRangeChange(r)}
               className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                activeRange === r.key
+                activeRange === r
                   ? "bg-foreground text-white"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {r.label}
+              {r}
             </button>
           ))}
         </div>
       </div>
 
       {/* Chart */}
-      <div className="mt-4 h-[200px]">
+      <div className={`mt-4 h-[200px] transition-opacity ${loading ? "opacity-50" : ""}`}>
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={currentData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+          <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="taskGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#6366f1" stopOpacity={0.15} />

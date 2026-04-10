@@ -6,10 +6,8 @@ import {
   Zap,
   CheckCircle2,
   Users,
-  TrendingUp,
-  TrendingDown,
-  Minus,
 } from "lucide-react";
+import type { DashboardStats } from "./DashboardClient";
 
 /* ─── Animated counter hook ─── */
 function useCountUp(target: number, duration = 1200) {
@@ -29,7 +27,6 @@ function useCountUp(target: number, duration = 1200) {
           const animate = (now: number) => {
             const elapsed = now - start;
             const progress = Math.min(elapsed / duration, 1);
-            // ease-out cubic
             const eased = 1 - Math.pow(1 - progress, 3);
             setValue(Math.round(eased * target));
             if (progress < 1) requestAnimationFrame(animate);
@@ -66,12 +63,12 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
   return (
     <svg width={w} height={h} className="overflow-visible">
       <defs>
-        <linearGradient id={`spark-${color}`} x1="0" x2="0" y1="0" y2="1">
+        <linearGradient id={`spark-${color.replace("#", "")}`} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity={0.2} />
           <stop offset="100%" stopColor={color} stopOpacity={0} />
         </linearGradient>
       </defs>
-      <polygon points={fillPoints} fill={`url(#spark-${color})`} />
+      <polygon points={fillPoints} fill={`url(#spark-${color.replace("#", "")})`} />
       <polyline
         points={points}
         fill="none"
@@ -84,97 +81,90 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
   );
 }
 
-/* ─── Stats data ─── */
-const stats = [
+/* ─── Card config ─── */
+const cardConfig = [
   {
+    key: "totalProjects" as const,
     label: "Total Projects",
-    value: 12,
-    change: 12,
-    trend: "up" as const,
     icon: FolderKanban,
     iconBg: "bg-indigo-50 text-indigo-600",
     sparkColor: "#6366f1",
-    sparkData: [4, 6, 5, 8, 7, 10, 12],
   },
   {
+    key: "activeTasks" as const,
     label: "Active Tasks",
-    value: 48,
-    change: 0,
-    trend: "flat" as const,
     icon: Zap,
     iconBg: "bg-amber-50 text-amber-600",
     sparkColor: "#d97706",
-    sparkData: [42, 45, 48, 46, 47, 48, 48],
   },
   {
+    key: "completedTasks" as const,
     label: "Completed",
-    value: 156,
-    change: 24,
-    trend: "up" as const,
     icon: CheckCircle2,
     iconBg: "bg-emerald-50 text-emerald-600",
     sparkColor: "#10b981",
-    sparkData: [90, 105, 118, 130, 138, 147, 156],
   },
   {
+    key: "teamMembers" as const,
     label: "Team Members",
-    value: 8,
-    change: -2,
-    trend: "down" as const,
     icon: Users,
     iconBg: "bg-sky-50 text-sky-600",
     sparkColor: "#0ea5e9",
-    sparkData: [10, 10, 9, 9, 8, 8, 8],
   },
 ];
 
-const trendConfig = {
-  up: { icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
-  down: { icon: TrendingDown, color: "text-red-500", bg: "bg-red-50" },
-  flat: { icon: Minus, color: "text-gray-400", bg: "bg-gray-100" },
-};
+// Generate a small fake sparkline from a value (just for visual interest)
+function generateSparkData(val: number): number[] {
+  const points = 7;
+  const result: number[] = [];
+  for (let i = 0; i < points - 1; i++) {
+    // Progress from ~30% to ~90% of val, then back to val at the end
+    const t = i / (points - 2); // 0 to 1
+    let value = val * (0.3 + t * 0.6);
+    // Add a small deterministic wiggle using sine of index
+    value += val * 0.05 * Math.sin(i * 1.5);
+    result.push(Math.round(value));
+  }
+  result.push(val); // last point = val
+  return result;
+}
 
-const StatsCards = () => {
+interface StatsCardsProps {
+  data: DashboardStats;
+}
+
+function StatCard({ config, value, index }: { config: typeof cardConfig[number]; value: number; index: number }) {
+  const { value: animatedValue, ref } = useCountUp(value);
+
+  return (
+    <div
+      ref={ref}
+      className={`group relative overflow-hidden rounded-none border border-border bg-white p-5 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 animate-fade-in-up animation-delay-${(index + 1) * 100}`}
+    >
+      <div className="flex items-center justify-between">
+        <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${config.iconBg}`}>
+          <config.icon className="h-[18px] w-[18px]" />
+        </div>
+      </div>
+      <div className="mt-4 flex items-end justify-between">
+        <div>
+          <p className="text-2xl font-bold tracking-tight text-foreground">
+            {animatedValue.toLocaleString()}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{config.label}</p>
+        </div>
+        <Sparkline data={generateSparkData(value)} color={config.sparkColor} />
+      </div>
+    </div>
+  );
+}
+
+const StatsCards = ({ data }: StatsCardsProps) => {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {stats.map((stat, i) => {
-        const { value, ref } = useCountUp(stat.value);
-        const tc = trendConfig[stat.trend];
-
-        return (
-          <div
-            ref={ref}
-            key={stat.label}
-            className={`group relative overflow-hidden rounded-xl border border-border bg-white p-5 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 animate-fade-in-up animation-delay-${(i + 1) * 100}`}
-          >
-            {/* Top row: icon + trend */}
-            <div className="flex items-center justify-between">
-              <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${stat.iconBg}`}>
-                <stat.icon className="h-[18px] w-[18px]" />
-              </div>
-              {stat.change !== 0 && (
-                <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${tc.color} ${tc.bg}`}>
-                  <tc.icon className="h-3 w-3" />
-                  {Math.abs(stat.change)}%
-                </div>
-              )}
-            </div>
-
-            {/* Value */}
-            <div className="mt-4 flex items-end justify-between">
-              <div>
-                <p className="text-2xl font-bold tracking-tight text-foreground">
-                  {value.toLocaleString()}
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {stat.label}
-                </p>
-              </div>
-              <Sparkline data={stat.sparkData} color={stat.sparkColor} />
-            </div>
-          </div>
-        );
-      })}
+      {cardConfig.map((config, i) => (
+        <StatCard key={config.key} config={config} value={data[config.key]} index={i} />
+      ))}
     </div>
   );
 };
