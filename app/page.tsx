@@ -4,7 +4,17 @@ import LandingPageFooter from "@/components/layout/LandingPageFooter";
 import LandingHero from "@/components/landing/Hero";
 import Features from "@/components/landing/Features";
 import Testimonials from "@/components/landing/Testimonials";
-export default function Home() {
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+
+export default async function Home() {
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (session) {
+    redirect("/dashboard");
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
