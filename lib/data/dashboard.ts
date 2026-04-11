@@ -177,6 +177,12 @@ export async function getPerformanceData(workspaceId: string, range: "7D" | "30D
 
 // ─── Featured Project ───
 export async function getFeaturedProject(workspaceId: string) {
+  // Grab the workspace background to fallback on
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { imageUrl: true },
+  });
+
   const project = await prisma.project.findFirst({
     where: { status: "ACTIVE", workspaceId },
     orderBy: { updatedAt: "desc" },
@@ -201,7 +207,7 @@ export async function getFeaturedProject(workspaceId: string) {
     description: project.description,
     progress,
     dueDate: project.dueDate?.toLocaleDateString("en-US", { month: "short", day: "numeric" }) ?? null,
-    imageUrl: project.imageUrl,
+    imageUrl: project.imageUrl || workspace?.imageUrl || null,
     taskBreakdown,
     totalTasks,
   };

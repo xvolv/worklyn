@@ -21,6 +21,7 @@ import {
   Check,
   XCircle,
   Loader2,
+  Activity,
 } from "lucide-react";
 import { useSidebar } from "./SidebarContext";
 import type { SidebarWorkspace, SidebarInvitation } from "./AppShell";
@@ -44,8 +45,12 @@ const DashboardSidebar = ({ workspaces, invitations }: DashboardSidebarProps) =>
   const pathname = usePathname();
   const router = useRouter();
   const { isOpen, width, isDragging, close, startDrag } = useSidebar();
+  
+  const ownWorkspaces = workspaces.filter(w => w.role === "OWNER");
+  const joinedWorkspaces = workspaces.filter(w => w.role !== "OWNER");
+
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
-    // Auto-expand the workspace the user is currently in
+    // Auto-expand the internal workspace items the user is currently traversing
     const initial: Record<string, boolean> = {};
     for (const ws of workspaces) {
       if (pathname.startsWith(`/w/${ws.slug}`)) {
@@ -54,6 +59,16 @@ const DashboardSidebar = ({ workspaces, invitations }: DashboardSidebarProps) =>
     }
     return initial;
   });
+
+  const [showOwnWorkspaces, setShowOwnWorkspaces] = useState<boolean>(() => {
+    // Auto-expand folder category if currently inside one
+    return ownWorkspaces.some(ws => pathname.startsWith(`/w/${ws.slug}`)) || true; // Defaulting to true as standard UX
+  });
+
+  const [showJoinedWorkspaces, setShowJoinedWorkspaces] = useState<boolean>(() => {
+    return joinedWorkspaces.some(ws => pathname.startsWith(`/w/${ws.slug}`));
+  });
+
   const [showInvitations, setShowInvitations] = useState(false);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
 
@@ -73,6 +88,109 @@ const DashboardSidebar = ({ workspaces, invitations }: DashboardSidebarProps) =>
     } finally {
       setRespondingTo(null);
     }
+  };
+
+  // Helper renderer for individual workspaces to keep JSX clean
+  const renderWorkspace = (ws: SidebarWorkspace) => {
+    const isExpanded = expanded[ws.id] ?? false;
+    const isActiveWs = pathname.startsWith(`/w/${ws.slug}`);
+
+    return (
+      <div key={ws.id}>
+        {/* Workspace header */}
+        <button
+          onClick={() => toggleExpand(ws.id)}
+          className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-semibold transition-colors ${
+            isActiveWs
+              ? "text-foreground"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          {isExpanded ? (
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          )}
+          <div className={`flex h-5 w-5 items-center justify-center rounded ${getColor(ws.name)}`}>
+            <Building2 className="h-3 w-3 text-white" />
+          </div>
+          <span className="truncate">{ws.name}</span>
+        </button>
+
+        {/* Expanded content */}
+        {isExpanded && (
+          <div className="ml-5 border-l border-border/60 pl-2 space-y-0.5 py-1">
+            <Link
+              href={`/w/${ws.slug}/dashboard`}
+              className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors ${
+                pathname === `/w/${ws.slug}/dashboard`
+                  ? "bg-indigo-50 text-indigo-700"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              <Activity className="h-3.5 w-3.5 shrink-0" />
+              Workspace Overview
+            </Link>
+
+            {/* Projects section */}
+            <div className="flex items-center justify-between px-2 pt-2 pb-0.5">
+              <Link
+                href={`/w/${ws.slug}/projects`}
+                className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                  pathname === `/w/${ws.slug}/projects`
+                    ? "text-indigo-600"
+                    : "text-muted-foreground/70 hover:text-muted-foreground"
+                }`}
+              >
+                Projects
+              </Link>
+              {ws.role === "OWNER" && (
+                <Link
+                  href={`/w/${ws.slug}/projects?new=true`}
+                  className="rounded p-0.5 text-muted-foreground/60 hover:bg-muted hover:text-foreground"
+                  title="New project"
+                >
+                  <Plus className="h-3 w-3" />
+                </Link>
+              )}
+            </div>
+
+            {ws.projects.length > 0 ? (
+              ws.projects.map((proj) => (
+                <Link
+                  key={proj.id}
+                  href={`/w/${ws.slug}/projects/${proj.id}`}
+                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors ${
+                    pathname === `/w/${ws.slug}/projects/${proj.id}`
+                      ? "bg-indigo-50 text-indigo-700"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <FolderKanban className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{proj.name}</span>
+                </Link>
+              ))
+            ) : (
+              <p className="px-2 py-1 text-[11px] text-muted-foreground/60 italic">
+                No projects yet
+              </p>
+            )}
+
+            <Link
+              href={`/w/${ws.slug}/members`}
+              className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors ${
+                pathname === `/w/${ws.slug}/members`
+                  ? "bg-indigo-50 text-indigo-700"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              <Users className="h-3.5 w-3.5 shrink-0" />
+              Members
+            </Link>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -115,7 +233,7 @@ const DashboardSidebar = ({ workspaces, invitations }: DashboardSidebarProps) =>
             href="/dashboard"
             className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               pathname === "/dashboard"
-                ? "bg-indigo-50 text-indigo-700"
+                ? "bg-gray-50 text-gray-700"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
@@ -135,142 +253,73 @@ const DashboardSidebar = ({ workspaces, invitations }: DashboardSidebarProps) =>
           </Link>
         </nav>
 
-        <div className="mx-4 h-px bg-border" />
-
-        {/* Workspaces */}
-        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
-          <div className="flex items-center justify-between px-2 pb-1">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Workspaces
-            </span>
-            <Link
-              href="/workspace/new"
-              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-              title="Create workspace"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-
-          {workspaces.length === 0 && (
-            <div className="px-2 py-4 text-center">
-              <p className="text-xs text-muted-foreground">No workspaces yet</p>
-              <Link
-                href="/workspace/new"
-                className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+        {/* Workspaces VSCode Layout */}
+        <div className="flex-1 overflow-y-auto w-full flex flex-col">
+          
+          {/* OWN WORKSPACES */}
+          {ownWorkspaces.length > 0 && (
+            <div className="flex flex-col border-t border-border">
+              <button
+                onClick={() => setShowOwnWorkspaces(!showOwnWorkspaces)}
+                className="group flex w-full items-center justify-between bg-muted/20 px-4 py-1 hover:bg-muted/50 transition-colors focus:outline-none"
               >
-                <Plus className="h-3 w-3" />
-                Create one
-              </Link>
+                <div className="flex items-center gap-1.5 focus:outline-none">
+                  {showOwnWorkspaces ? (
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  )}
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
+                    Own Workspaces
+                  </span>
+                </div>
+                <Link
+                  href="/workspace/new"
+                  className="rounded px-1.5 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                  title="Create Workspace"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Plus className="h-3 w-3" />
+                </Link>
+              </button>
+              
+              {showOwnWorkspaces && (
+                <div className="px-3 py-2 space-y-1 bg-white">
+                  {ownWorkspaces.map(renderWorkspace)}
+                </div>
+              )}
             </div>
           )}
 
-          {workspaces.map((ws) => {
-            const isExpanded = expanded[ws.id] ?? false;
-            const isActiveWs = pathname.startsWith(`/w/${ws.slug}`);
-
-            return (
-              <div key={ws.id}>
-                {/* Workspace header */}
-                <button
-                  onClick={() => toggleExpand(ws.id)}
-                  className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-semibold transition-colors ${
-                    isActiveWs
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          {/* JOINED WORKSPACES */}
+          {joinedWorkspaces.length > 0 && (
+            <div className="flex flex-col border-t border-border">
+              <button
+                onClick={() => setShowJoinedWorkspaces(!showJoinedWorkspaces)}
+                className="group flex w-full items-center px-4 py-1 bg-muted/20 hover:bg-muted/50 transition-colors focus:outline-none"
+              >
+                <div className="flex items-center gap-1.5 focus:outline-none">
+                  {showJoinedWorkspaces ? (
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
                   ) : (
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
                   )}
-                  <div className={`flex h-5 w-5 items-center justify-center rounded ${getColor(ws.name)}`}>
-                    <Building2 className="h-3 w-3 text-white" />
-                  </div>
-                  <span className="truncate">{ws.name}</span>
-                  {ws.role === "OWNER" && (
-                    <span className="ml-auto text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
-                      own
-                    </span>
-                  )}
-                </button>
-
-                {/* Expanded content */}
-                {isExpanded && (
-                  <div className="ml-5 border-l border-border/60 pl-2 space-y-0.5 py-1">
-                    <Link
-                      href={`/w/${ws.slug}/dashboard`}
-                      className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors ${
-                        pathname === `/w/${ws.slug}/dashboard`
-                          ? "bg-indigo-50 text-indigo-700"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }`}
-                    >
-                      <LayoutDashboard className="h-3.5 w-3.5 shrink-0" />
-                      Dashboard
-                    </Link>
-
-                    {/* Projects section */}
-                    <div className="flex items-center justify-between px-2 pt-2 pb-0.5">
-                      <Link
-                        href={`/w/${ws.slug}/projects`}
-                        className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                          pathname === `/w/${ws.slug}/projects`
-                            ? "text-indigo-600"
-                            : "text-muted-foreground/70 hover:text-muted-foreground"
-                        }`}
-                      >
-                        Projects
-                      </Link>
-                      {ws.role === "OWNER" && (
-                        <Link
-                          href={`/w/${ws.slug}/projects?new=true`}
-                          className="rounded p-0.5 text-muted-foreground/60 hover:bg-muted hover:text-foreground"
-                          title="New project"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Link>
-                      )}
-                    </div>
-
-                    {ws.projects.length > 0 ? (
-                      ws.projects.map((proj) => (
-                        <Link
-                          key={proj.id}
-                          href={`/w/${ws.slug}/projects/${proj.id}`}
-                          className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors ${
-                            pathname === `/w/${ws.slug}/projects/${proj.id}`
-                              ? "bg-indigo-50 text-indigo-700"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                          }`}
-                        >
-                          <FolderKanban className="h-3.5 w-3.5 shrink-0" />
-                          <span className="truncate">{proj.name}</span>
-                        </Link>
-                      ))
-                    ) : (
-                      <p className="px-2 py-1 text-[11px] text-muted-foreground/60 italic">
-                        No projects yet
-                      </p>
-                    )}
-
-                    <Link
-                      href={`/w/${ws.slug}/members`}
-                      className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors ${
-                        pathname === `/w/${ws.slug}/members`
-                          ? "bg-indigo-50 text-indigo-700"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }`}
-                    >
-                      <Users className="h-3.5 w-3.5 shrink-0" />
-                      Members
-                    </Link>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
+                    Joined Workspaces
+                  </span>
+                </div>
+              </button>
+              
+              {showJoinedWorkspaces && (
+                <div className="px-3 py-2 space-y-1 bg-white">
+                  {joinedWorkspaces.map(renderWorkspace)}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Empty Space Filler (to push items up like VSCode) */}
+          <div className="flex-1 bg-white border-t border-border" />
         </div>
 
         {/* Bottom section */}

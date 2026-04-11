@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { uploadImageToCloudinary } from "@/lib/cloudinary";
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,10 +12,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { name } = body;
+    const formData = await req.formData();
+    const name = formData.get("name") as string;
+    const coverImage = formData.get("coverImage") as File | null;
 
-    if (!name || typeof name !== "string" || name.trim().length === 0) {
+    if (!name || name.trim().length === 0) {
       return NextResponse.json(
         { error: "Workspace name is required" },
         { status: 400 }
@@ -41,11 +43,24 @@ export async function POST(req: NextRequest) {
       slug = `${slug}-${Date.now().toString(36)}`;
     }
 
+    let imageUrl: string | null = null;
+    if (coverImage) {
+      const arrayBuffer = await coverImage.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      try {
+        imageUrl = await uploadImageToCloudinary(buffer, "worklyn/workspaces");
+      } catch (err) {
+        console.error("Cloudinary upload failed:", err);
+        // Fallback to null if upload fails
+      }
+    }
+
     // Create workspace + add user as OWNER
     const workspace = await prisma.workspace.create({
       data: {
         name: name.trim(),
         slug,
+        imageUrl,
         members: {
           create: {
             userId: session.user.id,

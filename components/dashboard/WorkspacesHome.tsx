@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   X,
   Sparkles,
+  ImagePlus,
 } from "lucide-react";
 
 type WorkspaceCard = {
@@ -72,6 +73,8 @@ export default function WorkspacesHome({
   const firstName = userName.split(" ")[0];
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
+  const [coverImage, setCoverImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,6 +84,14 @@ export default function WorkspacesHome({
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCoverImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
@@ -88,10 +99,15 @@ export default function WorkspacesHome({
     setError(null);
 
     try {
+      const formData = new FormData();
+      formData.append("name", name.trim());
+      if (coverImage) {
+        formData.append("coverImage", coverImage);
+      }
+
       const res = await fetch("/api/workspace", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
+        body: formData,
       });
 
       if (!res.ok) {
@@ -100,8 +116,7 @@ export default function WorkspacesHome({
       }
 
       const { workspace } = await res.json();
-      router.push(`/w/${workspace.slug}/dashboard`);
-      router.refresh();
+      window.location.href = `/w/${workspace.slug}/dashboard`;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -131,13 +146,13 @@ export default function WorkspacesHome({
               className="group relative overflow-hidden rounded-xl border border-border bg-white shadow-sm transition-all hover:shadow-md hover:border-indigo-200"
             >
               <div
-                className={`h-2 bg-gradient-to-r ${getCardColor(ws.name)}`}
+                className={`h-2 bg-gradient-to-r from-gray-500 to-gray-600`}
               />
               <div className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br ${getCardColor(ws.name)} shadow-sm`}
+                      className={`flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-gray-500 to-gray-600 shadow-sm`}
                     >
                       <Building2 className="h-5 w-5 text-white" />
                     </div>
@@ -269,6 +284,36 @@ export default function WorkspacesHome({
                       </span>
                     </p>
                   )}
+                </div>
+
+                {/* Cover Image */}
+                <div>
+                  <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-foreground">
+                    <ImagePlus className="h-3.5 w-3.5 text-muted-foreground" />
+                    Cover Image
+                    <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+                  </label>
+                  <label
+                    htmlFor="ws-cover"
+                    className="flex h-24 w-full cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/20 transition-colors hover:border-indigo-300 hover:bg-indigo-50/30 overflow-hidden"
+                  >
+                    {imagePreview ? (
+                      <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                        <ImagePlus className="h-5 w-5" />
+                        <span className="text-xs">Click to upload</span>
+                      </div>
+                    )}
+                  </label>
+                  <input
+                    id="ws-cover"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageChange}
+                    disabled={isSubmitting}
+                  />
                 </div>
 
                 <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
