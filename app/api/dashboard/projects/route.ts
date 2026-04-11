@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify user is a member of the workspace
+    // Verify user is a member and OWNER of the workspace
     const membership = await prisma.workspaceMember.findUnique({
       where: {
         userId_workspaceId: {
@@ -45,9 +45,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    if (!membership) {
+    if (!membership || membership.role !== "OWNER") {
       return NextResponse.json(
-        { error: "Not a member of this workspace" },
+        { error: "Only workspace owners can create projects" },
         { status: 403 }
       );
     }

@@ -56,6 +56,22 @@ export async function PATCH(
       );
     }
 
+    // Role-based restrictions
+    if (membership.role !== "OWNER") {
+      if (task.assigneeId !== session.user.id) {
+        return NextResponse.json(
+          { error: "Members can only update tasks assigned to them" },
+          { status: 403 }
+        );
+      }
+      if (assigneeId !== undefined && assigneeId !== task.assigneeId) {
+        return NextResponse.json(
+          { error: "Members cannot reassign tasks" },
+          { status: 403 }
+        );
+      }
+    }
+
     const updateData: Record<string, unknown> = {};
     if (status) updateData.status = status;
     if (assigneeId !== undefined) updateData.assigneeId = assigneeId || null;
@@ -63,7 +79,26 @@ export async function PATCH(
     const updated = await prisma.task.update({
       where: { id: taskId },
       data: updateData,
+      include: {
+        assignee: { select: { name: true, email: true } }
+      }
     });
+
+    const serialized = {
+      id: updated.id,
+      title: updated.title,
+      status: updated.status,
+      priority: updated.priority,
+      dueDate: updated.dueDate?.toISOString() ?? null,
+      assigneeName: updated.assignee?.name ?? null,
+      assigneeEmail: updated.assignee?.email ?? null,
+      projectId: updated.projectId,
+    };
+
+    const io = (global as any).io;
+    if (io) {
+      io.emit("task-updated", serialized);
+    }
 
     return NextResponse.json({ task: updated });
   } catch (error) {

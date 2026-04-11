@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { MoreHorizontal, Plus, Clock, FolderKanban, ChevronDown } from "lucide-react";
-import CreateTaskModal from "./CreateTaskModal";
+import { useState, useEffect } from "react";
+import { Plus, MessageSquare, Paperclip, Eye, Menu, Filter, FolderKanban, ChevronDown } from "lucide-react";
+import { useWorkspace } from "../layout/WorkspaceContext";
+import { socket } from "@/lib/socket";
 import CreateProjectModal from "./CreateProjectModal";
 
 /* ------------------------------------------------------------------ */
@@ -17,8 +18,11 @@ type TaskItem = {
   status: string;
   priority: string;
   dueDate: string | null;
+  assigneeId: string | null;
   assigneeName: string | null;
   assigneeEmail: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type ProjectItem = {
@@ -33,169 +37,186 @@ type ProjectItem = {
 };
 
 interface ProjectBoardProps {
-  projects: ProjectItem[];
+  project: ProjectItem;
+  currentUserId: string;
 }
 
 /* ------------------------------------------------------------------ */
 /*  HELPERS                                                           */
 /* ------------------------------------------------------------------ */
 
-const priorityStyles: Record<string, string> = {
-  URGENT: "bg-red-100 text-red-600",
-  HIGH: "bg-red-100 text-red-600",
-  MEDIUM: "bg-amber-100 text-amber-700",
-  LOW: "bg-blue-100 text-blue-600",
+const statusDisplay: Record<string, string> = {
+  TODO: "To Do",
+  IN_PROGRESS: "In Progress",
+  IN_REVIEW: "Review",
+  DONE: "Done",
 };
 
-const statusColumns = [
-  { key: "TODO" as TaskStatusKey, title: "To Do" },
-  { key: "IN_PROGRESS" as TaskStatusKey, title: "In Progress", highlight: "bg-indigo-600 text-white" },
-  { key: "IN_REVIEW" as TaskStatusKey, title: "In Review", highlight: "bg-amber-500 text-white" },
-  { key: "DONE" as TaskStatusKey, title: "Done" },
-];
+const statusColors: Record<string, string> = {
+  TODO: "text-gray-500",
+  IN_PROGRESS: "text-indigo-600",
+  IN_REVIEW: "text-amber-500",
+  DONE: "text-emerald-500",
+};
 
-function daysUntil(dateStr: string | null): number | null {
-  if (!dateStr) return null;
-  const diff = new Date(dateStr).getTime() - Date.now();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+const statusBorderColors: Record<string, string> = {
+  TODO: "border-gray-200",
+  IN_PROGRESS: "border-indigo-500",
+  IN_REVIEW: "border-amber-400",
+  DONE: "border-emerald-400",
+};
+
+const priorityStyles: Record<string, string> = {
+  URGENT: "bg-rose-500 text-white",
+  HIGH: "bg-indigo-400 text-white",
+  MEDIUM: "bg-purple-200 text-purple-800",
+  LOW: "bg-gray-100 text-gray-600",
+};
+
+function formatDueDate(dateStr: string | null): string {
+  if (!dateStr) return "No due date";
+  const date = new Date(dateStr);
+  const diff = date.getTime() - Date.now();
+  const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+  
+  if (days === 0) return `Today, ${date.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' })}`;
+  if (days === 1) return `Tomorrow, ${date.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' })}`;
+  if (days < 0) return `Overdue`;
+  
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function timeAgo(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${Math.max(1, mins)}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  return `${days}d ago`;
 }
 
 function getInitials(name: string | null): string {
   if (!name) return "??";
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
 const avatarColors = [
-  "bg-indigo-500",
-  "bg-amber-500",
-  "bg-rose-500",
-  "bg-emerald-500",
-  "bg-sky-500",
-  "bg-purple-500",
-  "bg-teal-500",
+  "bg-indigo-300",
+  "bg-amber-300",
+  "bg-rose-300",
+  "bg-emerald-300",
+  "bg-sky-300",
+  "bg-purple-300",
 ];
 
 function getAvatarColor(name: string | null): string {
-  if (!name) return "bg-gray-400";
+  if (!name) return "bg-gray-300";
   const hash = name.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
   return avatarColors[hash % avatarColors.length];
 }
 
 /* ------------------------------------------------------------------ */
-/*  TASK CARD                                                         */
+/*  MY TASK CARD                                                      */
 /* ------------------------------------------------------------------ */
 
-const TaskCard = ({ task }: { task: TaskItem }) => {
-  const days = daysUntil(task.dueDate);
-  const isOverdue = days !== null && days < 0;
-
+const MyTaskCard = ({
+  task,
+  onUpdateStatus,
+}: {
+  task: TaskItem;
+  onUpdateStatus: (taskId: string, status: TaskStatusKey) => void;
+}) => {
   return (
-    <div className="group rounded-xl border border-border bg-white p-4 shadow-sm transition-all hover:shadow-md hover:border-indigo-200">
-      {/* Priority Badge */}
-      <span
-        className={`inline-block rounded-md px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-          priorityStyles[task.priority] || "bg-gray-100 text-gray-500"
-        }`}
-      >
-        {task.priority}
-      </span>
-
-      {/* Title */}
-      <p className="mt-2.5 text-sm font-semibold leading-snug text-foreground">
-        {task.title}
-      </p>
-
-      {/* Due date / progress */}
-      {days !== null && (
-        <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
-          <Clock className={`h-3 w-3 ${isOverdue ? "text-red-500" : ""}`} />
-          <span className={isOverdue ? "text-red-500 font-medium" : ""}>
-            {isOverdue
-              ? `${Math.abs(days)}d overdue`
-              : days === 0
-              ? "Due today"
-              : days === 1
-              ? "Due tomorrow"
-              : `${days}d left`}
+    <div className="flex flex-col rounded-xl bg-white p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] transition-shadow hover:shadow-[0_4px_15px_-4px_rgba(6,81,237,0.15)]">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3">
+          <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wide ${priorityStyles[task.priority] || "bg-gray-200 text-gray-700"}`}>
+            {task.priority}
+          </span>
+          <span className="text-xs font-medium text-gray-500">
+            {task.dueDate ? `Due ${formatDueDate(task.dueDate)}` : ""}
           </span>
         </div>
-      )}
-
-      {/* Footer */}
-      <div className="mt-3 flex items-center justify-between">
-        <div />
-        {task.assigneeName && (
-          <div
-            className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white ${getAvatarColor(task.assigneeName)}`}
-            title={task.assigneeName}
+        <div className="relative">
+          <select
+            value={task.status}
+            onChange={(e) => onUpdateStatus(task.id, e.target.value as TaskStatusKey)}
+            className="appearance-none rounded-full bg-gray-100 py-1 pl-3 pr-8 text-xs font-semibold text-gray-700 outline-none hover:bg-gray-200 cursor-pointer"
           >
-            {getInitials(task.assigneeName)}
+            {Object.entries(statusDisplay).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-500" />
+        </div>
+      </div>
+
+      <h3 className="text-[17px] font-bold text-gray-900 mb-4">{task.title}</h3>
+
+      <div className="flex items-center justify-between mt-auto">
+        <div 
+          className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm ${getAvatarColor(task.assigneeName)}`}
+          title={task.assigneeName || "Unassigned"}
+        >
+          {getInitials(task.assigneeName)}
+        </div>
+        
+        <div className="flex items-center gap-4 text-gray-400">
+          <div className="flex items-center gap-1.5 text-xs font-medium">
+            <MessageSquare className="h-4 w-4 fill-current opacity-20" />
+            <span>{Math.floor(Math.random() * 8)}</span>
           </div>
-        )}
+          <div className="flex items-center gap-1.5 text-xs font-medium">
+            <Paperclip className="h-4 w-4" />
+            <span>{Math.floor(Math.random() * 4)}</span>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
 /* ------------------------------------------------------------------ */
-/*  BOARD COLUMN                                                      */
+/*  TEAM TASK CARD                                                    */
 /* ------------------------------------------------------------------ */
 
-const BoardColumn = ({
-  title,
-  highlight,
-  tasks,
-  onAddTask,
-}: {
-  title: string;
-  highlight?: string;
-  tasks: TaskItem[];
-  onAddTask: () => void;
-}) => {
+const TeamTaskCard = ({ task }: { task: TaskItem }) => {
+  const borderColor = statusBorderColors[task.status] || "border-gray-200";
+  const stColor = statusColors[task.status] || "text-gray-500";
+  
   return (
-    <div className="flex flex-col">
-      {/* Column Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-foreground">{title}</h3>
-          <span
-            className={`flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
-              highlight || "bg-gray-100 text-muted-foreground"
-            }`}
-          >
-            {tasks.length}
-          </span>
+    <div className={`relative flex flex-col rounded-xl bg-white p-4 shadow-sm border-l-[3px] ${borderColor}`}>
+      <div className="flex items-start justify-between gap-3">
+        {/* Avatar Placeholder */}
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-gray-100 text-[11px] font-bold text-gray-600">
+          {getInitials(task.assigneeName)}
         </div>
-        <button className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
-      </div>
 
-      {/* Cards */}
-      <div className="flex-1 space-y-3">
-        {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} />
-        ))}
-        {tasks.length === 0 && (
-          <div className="flex h-24 items-center justify-center rounded-xl border-2 border-dashed border-border text-xs text-muted-foreground">
-            No tasks
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-1">
+            <span className={`text-[9px] font-bold uppercase tracking-wider ${stColor}`}>
+              {statusDisplay[task.status] || task.status}
+            </span>
+            <span className="text-[10px] font-medium text-gray-400">
+              {timeAgo(task.updatedAt || task.dueDate)}
+            </span>
           </div>
-        )}
+          <h4 className="text-sm font-bold text-gray-900 leading-tight mb-2 truncate">
+            {task.title}
+          </h4>
+          <div className="flex items-center gap-2">
+            <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold text-gray-600 uppercase tracking-widest">
+              Team
+            </span>
+            <span className="text-[10px] italic text-gray-400 truncate">
+              Assigned to {task.assigneeName || "Unassigned"}
+            </span>
+          </div>
+        </div>
       </div>
-
-      {/* Add Task */}
-      <button
-        onClick={onAddTask}
-        className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border text-sm font-medium text-muted-foreground transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600"
-      >
-        <Plus className="h-4 w-4" />
-        Add Task
-      </button>
     </div>
   );
 };
@@ -204,130 +225,193 @@ const BoardColumn = ({
 /*  PROJECT BOARD                                                     */
 /* ------------------------------------------------------------------ */
 
-const ProjectBoard = ({ projects }: ProjectBoardProps) => {
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    projects[0]?.id ?? null
-  );
+const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardProps) => {
+  const workspace = useWorkspace();
+  const isOwner = workspace.role === "OWNER";
+  
+  const [projectData, setProjectData] = useState<ProjectItem>(initialProject);
+  
+  const [quickTaskTitle, setQuickTaskTitle] = useState("");
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
 
-  // Task modal state
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [taskModalDefaultStatus, setTaskModalDefaultStatus] =
-    useState<TaskStatusKey>("TODO");
-  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  useEffect(() => {
+    socket.connect();
+    
+    socket.on("task-updated", (updatedTask: TaskItem & { projectId: string }) => {
+      setProjectData((prev) => {
+        if (prev.id !== updatedTask.projectId) return prev;
+        
+        const taskExists = prev.tasks.some((t) => t.id === updatedTask.id);
+        const newTasks = taskExists 
+          ? prev.tasks.map((t) => t.id === updatedTask.id ? { ...t, ...updatedTask } : t)
+          : [updatedTask, ...prev.tasks];
 
-  const selectedProject = projects.find((p) => p.id === selectedProjectId);
+        return { ...prev, tasks: newTasks };
+      });
+    });
 
-  // Group tasks by status for the selected project
-  const tasksByStatus = statusColumns.map((col) => ({
-    ...col,
-    tasks: selectedProject?.tasks.filter((t) => t.status === col.key) ?? [],
-  }));
+    return () => {
+      socket.off("task-updated");
+      socket.disconnect();
+    };
+  }, []);
 
-  const handleAddTask = (status: TaskStatusKey) => {
-    setTaskModalDefaultStatus(status);
-    setIsTaskModalOpen(true);
+  // Partition logic
+  const tasks = projectData.tasks || [];
+  const myTasks = tasks.filter((t) => t.assigneeId === currentUserId);
+  const teamTasks = tasks.filter((t) => t.assigneeId !== currentUserId);
+
+  const handleUpdateTaskStatus = async (taskId: string, status: TaskStatusKey) => {
+    try {
+      await fetch(`/api/dashboard/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  if (projects.length === 0) {
-    return (
-      <div className="mx-auto w-full max-w-7xl">
-        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border py-20">
-          <FolderKanban className="h-12 w-12 text-muted-foreground/30" />
-          <h2 className="mt-4 text-lg font-semibold text-foreground">No projects yet</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Create your first project to start organizing tasks.
-          </p>
-          <button
-            onClick={() => setIsProjectModalOpen(true)}
-            className="mt-5 flex h-10 items-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
-          >
-            <Plus className="h-4 w-4" />
-            New Project
-          </button>
-        </div>
-        <CreateProjectModal
-          isOpen={isProjectModalOpen}
-          onClose={() => setIsProjectModalOpen(false)}
-        />
-      </div>
-    );
-  }
+  const handleQuickAdd = async (e: React.KeyboardEvent | React.MouseEvent) => {
+    if ('key' in e && e.key !== 'Enter') return;
+    if (!quickTaskTitle.trim()) return;
+
+    setIsCreatingTask(true);
+    try {
+      await fetch(`/api/dashboard/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: quickTaskTitle,
+          projectId: projectData.id,
+          priority: "MEDIUM",
+          assigneeId: currentUserId,
+        }),
+      });
+      setQuickTaskTitle("");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsCreatingTask(false);
+    }
+  };
+
+  if (!projectData) return null;
 
   return (
-    <div className="mx-auto w-full max-w-7xl">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+    <div className="mx-auto w-full max-w-[1200px] font-sans text-gray-900 pb-10">
+      
+      {/* Top Header matching mockup */}
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            <span>Projects</span>
-            <span className="text-muted-foreground/50">&gt;</span>
-            <span className="text-indigo-600">{selectedProject?.name}</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600/80 mb-1 block">
+            Executive Overview
+          </span>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
+              {projectData.name}
+            </h1>
           </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
-            {selectedProject?.name ?? "Select a project"}
-          </h1>
-          {selectedProject?.description && (
-            <p className="mt-1 text-sm text-muted-foreground">
-              {selectedProject.description}
-            </p>
-          )}
         </div>
 
-        {/* Project Selector + New Project */}
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <select
-              value={selectedProjectId ?? ""}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="appearance-none rounded-lg border border-border bg-white py-2 pl-3 pr-8 text-sm font-medium text-foreground shadow-sm transition-all focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-            >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.taskCount} tasks)
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          </div>
-          <button
-            onClick={() => setIsProjectModalOpen(true)}
-            className="flex h-10 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
-          >
-            <Plus className="h-4 w-4" />
-            New Project
+        <div className="flex items-center bg-gray-100 rounded-full p-1 border border-gray-200/60 shadow-sm">
+          <button className="rounded-full bg-white px-5 py-2 text-[13px] font-bold text-gray-900 shadow-sm">
+            Personal View
+          </button>
+          <button className="rounded-full px-5 py-2 text-[13px] font-bold text-gray-500 hover:text-gray-900 transition-colors">
+            Team View
           </button>
         </div>
       </div>
 
-      {/* Board */}
-      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-4">
-        {tasksByStatus.map((col) => (
-          <BoardColumn
-            key={col.key}
-            title={col.title}
-            highlight={col.highlight}
-            tasks={col.tasks}
-            onAddTask={() => handleAddTask(col.key)}
-          />
-        ))}
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-3">
+        {/* Left Column: My Tasks */}
+        <div className="lg:col-span-2">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold text-gray-800">My Tasks</h1>
+              <span className="rounded-full bg-indigo-100 px-3 py-1 text-[11px] font-bold text-indigo-700">
+                {myTasks.length} Active
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-400">
+              <button className="p-1.5 hover:text-gray-900 transition-colors"><Menu className="h-5 w-5" /></button>
+              <button className="p-1.5 hover:text-gray-900 transition-colors"><Filter className="h-5 w-5" /></button>
+            </div>
+          </div>
+
+          {/* Quick Add Form */}
+          {isOwner && (
+            <div className="mb-6 flex items-center rounded-xl bg-[#F8F9FC] px-4 py-3 border border-gray-50/50">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600">
+                <Plus className="h-4 w-4 text-white" />
+              </div>
+              <input
+                type="text"
+                value={quickTaskTitle}
+                onChange={(e) => setQuickTaskTitle(e.target.value)}
+                onKeyDown={handleQuickAdd}
+                placeholder="Quickly add a task to 'My Tasks'..."
+                className="ml-3 flex-1 bg-transparent text-[15px] font-medium text-gray-700 outline-none placeholder:text-gray-400"
+                disabled={isCreatingTask}
+              />
+              <button 
+                onClick={handleQuickAdd}
+                className="ml-4 rounded-lg bg-gray-200 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-500 hover:bg-gray-300 transition-colors"
+              >
+                Enter to Save
+              </button>
+            </div>
+          )}
+
+          {/* Tasks List */}
+          <div className="flex flex-col gap-4">
+            {myTasks.map((task) => (
+              <MyTaskCard key={task.id} task={task} onUpdateStatus={handleUpdateTaskStatus} />
+            ))}
+            {myTasks.length === 0 && (
+              <div className="py-12 text-center text-sm font-medium text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                You have no active tasks in this project.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Team Tasks */}
+        <div className="lg:col-span-1 rounded-[24px] bg-[#F2F3F8] p-6 lg:p-8">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-[22px] font-bold text-gray-800">Team Tasks</h2>
+            <Eye className="h-5 w-5 text-gray-400" />
+          </div>
+
+          <div className="flex flex-col gap-4">
+            {teamTasks.map((task) => (
+              <TeamTaskCard key={task.id} task={task} />
+            ))}
+            {teamTasks.length === 0 && (
+              <div className="py-8 text-center text-[13px] font-medium text-gray-500">
+                No active team tasks.
+              </div>
+            )}
+          </div>
+
+          {/* Placeholder Graphic for UI Polish */}
+          <div className="mt-8 overflow-hidden rounded-2xl bg-indigo-900 relative">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
+            <img 
+              src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=600&auto=format&fit=crop" 
+              alt="Team Graphic" 
+              className="w-full h-36 object-cover opacity-60" 
+            />
+            <div className="absolute bottom-4 left-4 right-4 z-20">
+              <h4 className="text-[11px] font-bold uppercase tracking-widest text-white/90 mb-1">Collaborative Pulse</h4>
+              <p className="text-[10px] text-white/60 leading-tight">Your team is 65% through the current sprint.</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Create Task Modal */}
-      {selectedProject && (
-        <CreateTaskModal
-          isOpen={isTaskModalOpen}
-          onClose={() => setIsTaskModalOpen(false)}
-          projectId={selectedProject.id}
-          projectName={selectedProject.name}
-          defaultStatus={taskModalDefaultStatus}
-        />
-      )}
-
-      {/* Create Project Modal */}
-      <CreateProjectModal
-        isOpen={isProjectModalOpen}
-        onClose={() => setIsProjectModalOpen(false)}
-      />
     </div>
   );
 };

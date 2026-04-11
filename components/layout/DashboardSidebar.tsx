@@ -223,21 +223,27 @@ const DashboardSidebar = ({ workspaces, invitations }: DashboardSidebarProps) =>
                       >
                         Projects
                       </Link>
-                      <Link
-                        href={`/w/${ws.slug}/projects`}
-                        className="rounded p-0.5 text-muted-foreground/60 hover:bg-muted hover:text-foreground"
-                        title="New project"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Link>
+                      {ws.role === "OWNER" && (
+                        <Link
+                          href={`/w/${ws.slug}/projects?new=true`}
+                          className="rounded p-0.5 text-muted-foreground/60 hover:bg-muted hover:text-foreground"
+                          title="New project"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Link>
+                      )}
                     </div>
 
                     {ws.projects.length > 0 ? (
                       ws.projects.map((proj) => (
                         <Link
                           key={proj.id}
-                          href={`/w/${ws.slug}/projects`}
-                          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-foreground"
+                          href={`/w/${ws.slug}/projects/${proj.id}`}
+                          className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors ${
+                            pathname === `/w/${ws.slug}/projects/${proj.id}`
+                              ? "bg-indigo-50 text-indigo-700"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          }`}
                         >
                           <FolderKanban className="h-3.5 w-3.5 shrink-0" />
                           <span className="truncate">{proj.name}</span>

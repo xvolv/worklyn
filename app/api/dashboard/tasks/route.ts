@@ -58,9 +58,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    if (!membership) {
+    if (!membership || membership.role !== "OWNER") {
       return NextResponse.json(
-        { error: "Not a member of this workspace" },
+        { error: "Only workspace owners can create tasks" },
         { status: 403 }
       );
     }

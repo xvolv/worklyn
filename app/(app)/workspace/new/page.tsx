@@ -48,7 +48,7 @@ export default function NewWorkspacePage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f5f6fa] p-4">
+    <div className="-mt-[100px] flex min-h-screen items-center justify-center bg-[#f5f6fa] p-4">
       <div className="w-full max-w-md">
         {/* Logo area */}
         <div className="mb-8 text-center">

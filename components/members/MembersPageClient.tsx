@@ -122,34 +122,38 @@ const MembersPageClient = ({ members }: MembersPageClientProps) => {
             Manage your workspace members and invite new teammates.
           </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex h-10 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
-        >
-          <UserPlus className="h-4 w-4" />
-          Add Member
-        </button>
+        {workspace.role === "OWNER" && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex h-10 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
+          >
+            <UserPlus className="h-4 w-4" />
+            Add Member
+          </button>
+        )}
       </div>
 
       {/* Invite Link Card */}
-      <div className="mt-5 flex items-center gap-3 rounded-xl border border-indigo-100 bg-indigo-50/50 px-4 py-3">
-        <Link2 className="h-4 w-4 shrink-0 text-indigo-600" />
-        <p className="flex-1 truncate text-sm text-indigo-700">
-          <span className="font-medium">Invite link:</span>{" "}
-          <span className="font-mono text-xs">{inviteLink || "Loading..."}</span>
-        </p>
-        <button
-          onClick={handleCopyLink}
-          className="flex h-8 items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-3 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-50"
-        >
-          {copied ? (
-            <Check className="h-3.5 w-3.5" />
-          ) : (
-            <Copy className="h-3.5 w-3.5" />
-          )}
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </div>
+      {workspace.role === "OWNER" && (
+        <div className="mt-5 flex items-center gap-3 rounded-xl border border-indigo-100 bg-indigo-50/50 px-4 py-3">
+          <Link2 className="h-4 w-4 shrink-0 text-indigo-600" />
+          <p className="flex-1 truncate text-sm text-indigo-700">
+            <span className="font-medium">Invite link:</span>{" "}
+            <span className="font-mono text-xs">{inviteLink || "Loading..."}</span>
+          </p>
+          <button
+            onClick={handleCopyLink}
+            className="flex h-8 items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-3 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-50"
+          >
+            {copied ? (
+              <Check className="h-3.5 w-3.5" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="mt-5 flex items-center gap-3">

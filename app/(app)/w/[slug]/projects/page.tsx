@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import ProjectBoard from "@/components/dashboard/ProjectBoard";
+import ProjectsIndexClient from "@/components/dashboard/ProjectsIndexClient";
 
 export default async function ProjectsPage({
   params,
@@ -24,12 +24,6 @@ export default async function ProjectsPage({
     where: { workspaceId: workspace.id },
     orderBy: { updatedAt: "desc" },
     include: {
-      tasks: {
-        include: {
-          assignee: { select: { name: true, email: true } },
-        },
-        orderBy: { createdAt: "desc" },
-      },
       _count: { select: { tasks: true } },
     },
   });
@@ -42,16 +36,7 @@ export default async function ProjectsPage({
     progress: p.progress,
     dueDate: p.dueDate?.toISOString() ?? null,
     taskCount: p._count.tasks,
-    tasks: p.tasks.map((t) => ({
-      id: t.id,
-      title: t.title,
-      status: t.status,
-      priority: t.priority,
-      dueDate: t.dueDate?.toISOString() ?? null,
-      assigneeName: t.assignee?.name ?? null,
-      assigneeEmail: t.assignee?.email ?? null,
-    })),
   }));
 
-  return <ProjectBoard projects={serialized} />;
+  return <ProjectsIndexClient projects={serialized} />;
 }
