@@ -3,6 +3,7 @@ import { useSession } from "@/lib/auth/auth-client";
 import { signOut } from "@/lib/auth/auth-client";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { Search, MessageSquare, LogOut, User, Settings, Menu, PanelLeftClose } from "lucide-react";
 import {
@@ -37,6 +38,26 @@ const DashboardHeader = () => {
     router.refresh();
   };
 
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+  useEffect(() => {
+    if (!params.slug) return;
+    const fetchChatCount = async () => {
+      try {
+        const res = await fetch(`/api/workspace/${params.slug}/chat/count`);
+        if (res.ok) {
+          const data = await res.json();
+          const readCount = parseInt(localStorage.getItem(`wk_chat_read_${data.workspaceId}`) || "0");
+          const unread = data.count - readCount;
+          setUnreadChatCount(unread > 0 ? unread : 0);
+        }
+      } catch {}
+    };
+    fetchChatCount();
+    window.addEventListener("focus", fetchChatCount);
+    return () => window.removeEventListener("focus", fetchChatCount);
+  }, [params.slug]);
+
   return (
     <header className=" sticky  top-0 z-10 flex h-16 items-center justify-between border-b border-border bg-white pl-1 pr-8">
       {/* Left: Toggle + Search */}
@@ -65,10 +86,15 @@ const DashboardHeader = () => {
         {params.slug && (
           <Link 
             href={`/w/${params.slug}/chat`}
-            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="relative rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             title="Team Chat"
           >
             <MessageSquare className="h-5 w-5" />
+            {unreadChatCount > 0 && (
+              <span className="absolute -top-1 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">
+                {unreadChatCount}
+              </span>
+            )}
           </Link>
         )}
 

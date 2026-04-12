@@ -143,7 +143,14 @@ export default function WorkspaceChat({
     if (!loading && messages.length > 0) {
       messagesEndRef.current?.scrollIntoView();
     }
-  }, [loading]);
+    
+    // Transparently log read receipts inside the Workspace container to automatically suppress header notifications
+    try {
+      fetch(`/api/workspace/${workspaceSlug}/chat/count`).then(r => r.json()).then(data => {
+        localStorage.setItem(`wk_chat_read_${workspaceId}`, data.count.toString());
+      });
+    } catch {}
+  }, [loading, messages, workspaceSlug, workspaceId]);
 
   // Track scroll position for "scroll down" button
   const handleScroll = () => {
@@ -185,7 +192,7 @@ export default function WorkspaceChat({
   };
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-4rem)] w-full max-w-4xl flex-col">
+    <div className="mt-10 mx-auto flex h-[calc(100vh-4rem)] w-full max-w-4xl flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-border px-6 py-4">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100">
@@ -253,11 +260,12 @@ export default function WorkspaceChat({
                       {/* Avatar or spacer */}
                       <div className="w-8 shrink-0 flex justify-center">
                         {!consecutive && (
-                          <div
-                            className={`flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-sm ${getAvatarColor(msg.author.name)}`}
-                          >
-                            {getInitials(msg.author.name)}
-                          </div>
+                             <img 
+                               src={msg.author.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.author.email || msg.author.name}`}
+                               alt={msg.author.name} 
+                               className="flex h-8 w-8 items-center justify-center rounded-full object-cover bg-indigo-50 shadow-sm" 
+                               loading="lazy"
+                             />
                         )}
                       </div>
 

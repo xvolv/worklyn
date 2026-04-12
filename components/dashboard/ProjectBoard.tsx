@@ -25,6 +25,7 @@ type TaskItem = {
   assigneeName: string | null;
   assigneeEmail: string | null;
   assigneeImage?: string | null;
+  commentCount?: number;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -128,6 +129,7 @@ function getAvatarColor(name: string | null): string {
 
 const MyTaskCard = ({
   task,
+  unreadCount,
   onUpdateStatus,
   onOpenComments,
   onDeleteTask,
@@ -135,6 +137,7 @@ const MyTaskCard = ({
   isOwner,
 }: {
   task: TaskItem;
+  unreadCount: number;
   onUpdateStatus: (taskId: string, status: TaskStatusKey) => void;
   onOpenComments: (task: TaskItem) => void;
   onDeleteTask?: (taskId: string) => void;
@@ -184,10 +187,15 @@ const MyTaskCard = ({
         <div className="flex items-center gap-4 text-gray-400">
           <button
             onClick={() => onOpenComments(task)}
-            className="flex items-center gap-1.5 text-xs font-medium hover:text-gray-600 transition-colors"
+            className="flex items-center hover:text-gray-600 transition-colors relative"
             title="Comments"
           >
             <MessageSquare className="h-4 w-4" />
+            {unreadCount > 0 ? (
+              <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white ring-2 ring-white shadow-sm">
+                {unreadCount}
+              </span>
+            ) : null}
           </button>
           {onDeleteTask && isOwner && (
             <button
@@ -228,13 +236,12 @@ const TeamTaskCard = ({
     <div className={`relative flex flex-col rounded-none bg-white p-4 shadow-sm border-l-[3px] ${borderColor}  `}>
       <div className="flex items-start justify-between gap-3">
         {/* Avatar Render */}
-        {task.assigneeImage ? (
-          <img src={task.assigneeImage} alt={task.assigneeName || "Avatar"} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] object-cover bg-gray-100" />
-        ) : (
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-gray-100 text-[11px] font-bold text-gray-600">
-            {getInitials(task.assigneeName)}
-          </div>
-        )}
+        <img 
+          src={task.assigneeImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${task.assigneeEmail || task.assigneeName || 'user'}`} 
+          alt={task.assigneeName || "Avatar"} 
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] object-cover bg-indigo-50" 
+          loading="lazy"
+        />
 
         <div className="flex-1 min-w-0 ">
           <div className="flex items-center justify-between mb-1">
@@ -278,6 +285,7 @@ const TeamTaskCard = ({
 
 const KanbanTaskCard = ({
   task,
+  unreadCount,
   onUpdateStatus,
   onOpenComments,
   onDeleteTask,
@@ -285,6 +293,7 @@ const KanbanTaskCard = ({
   isDeleting
 }: {
   task: TaskItem;
+  unreadCount: number;
   onUpdateStatus: (taskId: string, status: TaskStatusKey) => void;
   onOpenComments: (task: TaskItem) => void;
   onDeleteTask?: (taskId: string) => void;
@@ -317,29 +326,26 @@ const KanbanTaskCard = ({
       )}
       <div className="flex items-center justify-between mt-2 pt-3 border-t border-gray-50/80">
         <div className="flex items-center gap-1.5">
-          {task.assigneeImage ? (
-            <img 
-              src={task.assigneeImage} 
-              alt={task.assigneeName || "Avatar"} 
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full shadow-sm ring-2 ring-white object-cover bg-gray-100" 
-              title={task.assigneeName || "Unassigned"}
-            />
-          ) : (
-            <div
-              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white shadow-sm ring-2 ring-white ${getAvatarColor(task.assigneeName)}`}
-              title={task.assigneeName || "Unassigned"}
-            >
-              {getInitials(task.assigneeName)}
-            </div>
-          )}
+          <img 
+            src={task.assigneeImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${task.assigneeEmail || task.assigneeName || 'user'}`}
+            alt={task.assigneeName || "Avatar"} 
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full shadow-sm ring-2 ring-white object-cover bg-indigo-50" 
+            title={task.assigneeName || "Unassigned"}
+            loading="lazy"
+          />
           <span className="text-[10px] font-semibold text-gray-600 truncate max-w-[90px]">
             {task.assigneeName || "Unassigned"}
           </span>
         </div>
         <div className="flex items-center gap-3 text-gray-400">
           {task.dueDate && <span className="text-[10px] font-medium text-gray-400">{formatDueDate(task.dueDate)}</span>}
-          <button onClick={() => onOpenComments(task)} className="hover:text-gray-600 transition-colors" title="Comments">
+          <button onClick={() => onOpenComments(task)} className="flex items-center hover:text-gray-600 transition-colors relative" title="Comments">
             <MessageSquare className="h-3.5 w-3.5" />
+            {unreadCount > 0 ? (
+              <span className="absolute -top-1.5 -right-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-rose-500 px-0.5 text-[8px] font-bold text-white ring-1 ring-white shadow-sm">
+                {unreadCount}
+              </span>
+            ) : null}
           </button>
         </div>
       </div>
@@ -363,6 +369,46 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
   const [isDeleting, setIsDeleting] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [commentTask, setCommentTask] = useState<{ id: string; title: string } | null>(null);
+
+  const [readReceipts, setReadReceipts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(`wk_read_${currentUserId}`);
+      if (stored) setReadReceipts(JSON.parse(stored));
+    } catch {}
+  }, [currentUserId]);
+
+  const handleOpenComments = (task: TaskItem) => {
+    setCommentTask({ id: task.id, title: task.title });
+    
+    // Clear notification specifically for this task exactly as requested
+    const count = task.commentCount || 0;
+    const nextR = { ...readReceipts, [task.id]: count };
+    setReadReceipts(nextR);
+    try {
+      localStorage.setItem(`wk_read_${currentUserId}`, JSON.stringify(nextR));
+    } catch {}
+  };
+
+  const getUnreadCount = (task: TaskItem) => {
+    const total = task.commentCount || 0;
+    if (total === 0) return 0;
+    const read = readReceipts[task.id] || 0;
+    
+    // Self healing: if they deleted comments and total drops below read
+    if (total < read) {
+      setTimeout(() => {
+        setReadReceipts(prev => {
+          const updated = { ...prev, [task.id]: total };
+          try { localStorage.setItem(`wk_read_${currentUserId}`, JSON.stringify(updated)); } catch {}
+          return updated;
+        });
+      }, 0);
+      return 0;
+    }
+    return total - read;
+  };
 
   const { on } = useSocket();
 
@@ -522,8 +568,9 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
                 <MyTaskCard
                   key={task.id}
                   task={task}
+                  unreadCount={getUnreadCount(task)}
                   onUpdateStatus={handleUpdateTaskStatus}
-                  onOpenComments={(t: TaskItem) => setCommentTask({ id: t.id, title: t.title })}
+                  onOpenComments={() => handleOpenComments(task)}
                   onDeleteTask={() => setTaskToDelete(task.id)}
                   isDeleting={isDeleting}
                   isOwner={isOwner}
@@ -614,8 +661,9 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
                     <KanbanTaskCard
                       key={task.id}
                       task={task}
+                      unreadCount={getUnreadCount(task)}
                       onUpdateStatus={handleUpdateTaskStatus}
-                      onOpenComments={(t: TaskItem) => setCommentTask({ id: t.id, title: t.title })}
+                      onOpenComments={() => handleOpenComments(task)}
                       onDeleteTask={() => setTaskToDelete(task.id)}
                       isOwner={isOwner}
                       isDeleting={isDeleting}
