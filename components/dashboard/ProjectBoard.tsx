@@ -24,6 +24,7 @@ type TaskItem = {
   assigneeId: string | null;
   assigneeName: string | null;
   assigneeEmail: string | null;
+  assigneeImage?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -226,10 +227,14 @@ const TeamTaskCard = ({
     // must be scrollable
     <div className={`relative flex flex-col rounded-none bg-white p-4 shadow-sm border-l-[3px] ${borderColor}  `}>
       <div className="flex items-start justify-between gap-3">
-        {/* Avatar Placeholder */}
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-gray-100 text-[11px] font-bold text-gray-600">
-          {getInitials(task.assigneeName)}
-        </div>
+        {/* Avatar Render */}
+        {task.assigneeImage ? (
+          <img src={task.assigneeImage} alt={task.assigneeName || "Avatar"} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] object-cover bg-gray-100" />
+        ) : (
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-gray-100 text-[11px] font-bold text-gray-600">
+            {getInitials(task.assigneeName)}
+          </div>
+        )}
 
         <div className="flex-1 min-w-0 ">
           <div className="flex items-center justify-between mb-1">
@@ -312,12 +317,21 @@ const KanbanTaskCard = ({
       )}
       <div className="flex items-center justify-between mt-2 pt-3 border-t border-gray-50/80">
         <div className="flex items-center gap-1.5">
-          <div
-            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white shadow-sm ring-2 ring-white ${getAvatarColor(task.assigneeName)}`}
-            title={task.assigneeName || "Unassigned"}
-          >
-            {getInitials(task.assigneeName)}
-          </div>
+          {task.assigneeImage ? (
+            <img 
+              src={task.assigneeImage} 
+              alt={task.assigneeName || "Avatar"} 
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full shadow-sm ring-2 ring-white object-cover bg-gray-100" 
+              title={task.assigneeName || "Unassigned"}
+            />
+          ) : (
+            <div
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white shadow-sm ring-2 ring-white ${getAvatarColor(task.assigneeName)}`}
+              title={task.assigneeName || "Unassigned"}
+            >
+              {getInitials(task.assigneeName)}
+            </div>
+          )}
           <span className="text-[10px] font-semibold text-gray-600 truncate max-w-[90px]">
             {task.assigneeName || "Unassigned"}
           </span>

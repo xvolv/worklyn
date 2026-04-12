@@ -8,17 +8,22 @@ cloudinary.config({
 
 export async function uploadImageToCloudinary(
   fileBuffer: Buffer,
-  folderName: string = "worklyn"
+  folderName: string = "worklyn",
+  options?: { aspectRatio?: string; crop?: string; gravity?: string }
 ): Promise<string> {
   return new Promise((resolve, reject) => {
+    const uploadOptions: any = {
+      folder: folderName,
+      resource_type: "image",
+      crop: options?.crop || "fill",
+      gravity: options?.gravity || "auto",
+    };
+    if (options?.aspectRatio) {
+      uploadOptions.aspect_ratio = options.aspectRatio;
+    }
+
     const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: folderName,
-        resource_type: "image",
-        aspect_ratio: "16:9",
-        crop: "fill",
-        gravity: "auto",
-      },
+      uploadOptions,
       (error, result) => {
         if (error) return reject(error);
         if (!result) return reject(new Error("No result from Cloudinary"));

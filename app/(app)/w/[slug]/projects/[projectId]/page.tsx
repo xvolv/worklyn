@@ -25,7 +25,7 @@ export default async function SingleProjectPage({
     include: {
       tasks: {
         include: {
-          assignee: { select: { id: true, name: true, email: true } },
+          assignee: { select: { id: true, name: true, email: true, image: true } },
         },
         orderBy: { createdAt: "desc" },
       },
@@ -54,6 +54,7 @@ export default async function SingleProjectPage({
       assigneeId: t.assignee?.id ?? null,
       assigneeName: t.assignee?.name ?? null,
       assigneeEmail: t.assignee?.email ?? null,
+      assigneeImage: t.assignee?.image ?? null,
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
     })),

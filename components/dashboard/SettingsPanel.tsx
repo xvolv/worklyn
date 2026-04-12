@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth/auth-client";
 import { useWorkspace } from "../layout/WorkspaceContext";
-import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import {
   User,
   Bell,
@@ -15,54 +15,124 @@ import {
   Camera,
   Moon,
   Sun,
+  Building2,
+  Loader2
 } from "lucide-react";
 
-/* ------------------------------------------------------------------ */
-/*  SETTINGS NAV                                                      */
-/* ------------------------------------------------------------------ */
+interface SettingsPanelProps {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    image: string | null;
+  };
+  workspaceData: {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    imageUrl: string | null;
+  };
+}
 
-const tabs = [
-  { id: "profile", label: "Profile", icon: User },
-  { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "security", label: "Security", icon: Lock },
-  { id: "appearance", label: "Appearance", icon: Palette },
-  { id: "language", label: "Language & Region", icon: Globe },
-  { id: "billing", label: "Billing", icon: CreditCard },
-];
+const SettingsPanel = ({ user, workspaceData }: SettingsPanelProps) => {
+  const workspace = useWorkspace();
+  
+  const tabs = [
+    { id: "profile", label: "Profile", icon: User },
+    ...(workspace.role === "OWNER" ? [{ id: "workspace", label: "Workspace", icon: Building2 }] : []),
+    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "security", label: "Security", icon: Lock },
+    { id: "appearance", label: "Appearance", icon: Palette },
+    { id: "language", label: "Language & Region", icon: Globe },
+    { id: "billing", label: "Billing", icon: CreditCard },
+  ];
 
-/* ------------------------------------------------------------------ */
-/*  COMPONENT                                                         */
-/* ------------------------------------------------------------------ */
-
-const SettingsPanel = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const [darkMode, setDarkMode] = useState(false);
   const [emailNotif, setEmailNotif] = useState(true);
   const [pushNotif, setPushNotif] = useState(true);
   const [weeklyDigest, setWeeklyDigest] = useState(false);
   
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  // Profile State
+  const [userName, setUserName] = useState(user.name);
+  const [userEmail, setUserEmail] = useState(user.email);
+  const [profileSaveStatus, setProfileSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const profileFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Workspace State
+  const [wsName, setWsName] = useState(workspaceData.name);
+  const [wsSlug, setWsSlug] = useState(workspaceData.slug);
+  const [wsDescription, setWsDescription] = useState(workspaceData.description || "");
+  const [wsSaveStatus, setWsSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [wsImageFile, setWsImageFile] = useState<File | null>(null);
+  const [wsImagePreview, setWsImagePreview] = useState<string | null>(null);
+  const wsFileInputRef = useRef<HTMLInputElement>(null);
   
   const router = useRouter();
-  const workspace = useWorkspace();
 
-  const handleDeleteWorkspace = async () => {
-    setIsDeleting(true);
+  const handleSaveProfile = async () => {
+    setProfileSaveStatus("saving");
     try {
-      const res = await fetch(`/api/workspace/${workspace.slug}`, {
-        method: "DELETE",
+      const formData = new FormData();
+      formData.append("name", userName);
+      if (profileImageFile) {
+        formData.append("image", profileImageFile);
+      }
+
+      const res = await fetch("/api/user", {
+        method: "PUT",
+        body: formData,
       });
-      if (!res.ok) throw new Error("Failed to delete workspace");
+      if (!res.ok) throw new Error("Failed to update profile");
       
-      router.push("/");
-      router.refresh(); // Wait or immediately go
-    } catch (error) {
-      console.error(error);
-      alert("Failed to delete workspace.");
-    } finally {
-      setIsDeleting(false);
-      setIsDeleteModalOpen(false);
+      const data = await res.json();
+      // Sync better-auth cache immediately for header
+      await authClient.updateUser({ name: userName, image: data.user?.image || user.image });
+
+      setProfileSaveStatus("saved");
+      router.refresh();
+
+      setTimeout(() => setProfileSaveStatus("idle"), 2500);
+    } catch (e) {
+      console.error(e);
+      setProfileSaveStatus("idle");
+    }
+  };
+
+  const handleSaveWorkspace = async () => {
+    setWsSaveStatus("saving");
+    try {
+      const formData = new FormData();
+      formData.append("name", wsName);
+      formData.append("slug", wsSlug);
+      formData.append("description", wsDescription);
+      if (wsImageFile) {
+        formData.append("image", wsImageFile);
+      }
+
+      const res = await fetch(`/api/workspace/${workspace.slug}/update`, {
+        method: "PUT",
+        body: formData,
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update workspace");
+      
+      setWsSaveStatus("saved");
+      setTimeout(() => {
+        setWsSaveStatus("idle");
+        if (wsSlug !== workspace.slug) {
+          window.location.href = `/w/${wsSlug}/settings`;
+        } else {
+          router.refresh();
+        }
+      }, 1000);
+    } catch (e: any) {
+      console.error(e);
+      setWsSaveStatus("idle");
     }
   };
 
@@ -117,25 +187,38 @@ const SettingsPanel = () => {
                   Profile Photo
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Update your avatar for your workspace.
+                  Update your personal avatar.
                 </p>
                 <div className="mt-4 flex items-center gap-5">
                   <div className="relative">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xl font-bold text-white">
-                      AJ
-                    </div>
-                    <button className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-indigo-600 text-white shadow-sm transition-colors hover:bg-indigo-700">
+                    {profileImagePreview || user.image ? (
+                      <img src={profileImagePreview || user.image!} alt="Avatar" className="h-20 w-20 rounded-full object-cover shadow-sm bg-muted" />
+                    ) : (
+                      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xl font-bold text-white">
+                        {user.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <button 
+                      onClick={() => profileFileInputRef.current?.click()}
+                      className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-indigo-600 text-white shadow-sm transition-colors hover:bg-indigo-700"
+                    >
                       <Camera className="h-3.5 w-3.5" />
                     </button>
+                    <input 
+                      type="file" 
+                      ref={profileFileInputRef} 
+                      className="hidden" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setProfileImageFile(file);
+                          setProfileImagePreview(URL.createObjectURL(file));
+                        }
+                      }}
+                    />
                   </div>
-                  <div className="space-y-2">
-                    <button className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700">
-                      Upload Photo
-                    </button>
-                    <p className="text-xs text-muted-foreground">
-                      JPG, PNG or GIF. Max 2MB.
-                    </p>
-                  </div>
+               
                 </div>
               </div>
 
@@ -150,21 +233,12 @@ const SettingsPanel = () => {
                 <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      First Name
+                      Full Name
                     </label>
                     <input
                       type="text"
-                      defaultValue="Alex"
-                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Last Name
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue="Johnson"
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
                       className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                     />
                   </div>
@@ -174,24 +248,134 @@ const SettingsPanel = () => {
                     </label>
                     <input
                       type="email"
-                      defaultValue="alex.j@worklyn.io"
+                      value={userEmail}
+                      disabled
+                      className="h-10 w-full rounded-lg border border-border bg-muted px-3 text-sm text-muted-foreground cursor-not-allowed"
+                      title="Email cannot be changed directly"
+                    />
+                  </div>
+                </div>
+                <div className="mt-5 flex justify-end">
+                  <button 
+                    onClick={handleSaveProfile}
+                    disabled={profileSaveStatus !== "idle"}
+                    className="flex min-w-[120px] items-center justify-center rounded-lg bg-gray-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-gray-700 disabled:opacity-50"
+                  >
+                    {profileSaveStatus === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : profileSaveStatus === "saved" ? "Saved!" : "Save Changes"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Workspace Section */}
+          {activeTab === "workspace" && workspace.role === "OWNER" && (
+            <div className="space-y-6">
+              <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
+                <h3 className="text-base font-bold text-foreground">
+                  Workspace Identity
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Update your workspace image.
+                </p>
+                <div className="mt-4 flex items-center gap-5">
+                  <div className="relative">
+                    {wsImagePreview || workspaceData.imageUrl ? (
+                      <img src={wsImagePreview || workspaceData.imageUrl!} alt="Workspace Image" className="h-20 w-20 rounded-lg object-cover shadow-sm bg-muted" />
+                    ) : (
+                      <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 text-xl font-bold text-white">
+                        <Building2 className="h-8 w-8" />
+                      </div>
+                    )}
+                    <button 
+                      onClick={() => wsFileInputRef.current?.click()}
+                      className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-indigo-600 text-white shadow-sm transition-colors hover:bg-indigo-700"
+                    >
+                      <Camera className="h-3.5 w-3.5" />
+                    </button>
+                    <input 
+                      type="file" 
+                      ref={wsFileInputRef} 
+                      className="hidden" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setWsImageFile(file);
+                          setWsImagePreview(URL.createObjectURL(file));
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <button 
+                      onClick={() => wsFileInputRef.current?.click()}
+                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
+                    >
+                      Upload Image
+                    </button>
+                    <p className="text-xs text-muted-foreground">
+                      JPG, PNG or GIF. Max 2MB.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
+                <h3 className="text-base font-bold text-foreground">
+                  Workspace Details
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Update your shared workspace identity.
+                </p>
+                <div className="mt-5 grid grid-cols-1 gap-5 max-w-lg">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Workspace Name
+                    </label>
+                    <input
+                      type="text"
+                      value={wsName}
+                      onChange={(e) => setWsName(e.target.value)}
                       className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Job Title
+                      Workspace URL Slug
                     </label>
-                    <input
-                      type="text"
-                      defaultValue="Product Manager"
-                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    <div className="flex">
+                      <span className="inline-flex items-center rounded-l-lg border border-r-0 border-border bg-muted px-3 text-sm text-muted-foreground">
+                        worklyn.com/w/
+                      </span>
+                      <input
+                        type="text"
+                        value={wsSlug}
+                        onChange={(e) => setWsSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                        className="h-10 flex-1 rounded-none rounded-r-lg border border-border bg-background px-3 text-sm focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Workspace Description
+                    </label>
+                    <textarea
+                      value={wsDescription}
+                      onChange={(e) => setWsDescription(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-lg border border-border bg-background p-3 text-sm focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none custom-scrollbar"
+                      placeholder="Briefly describe the purpose of this workspace..."
                     />
                   </div>
                 </div>
-                <div className="mt-5 flex justify-end">
-                  <button className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700">
-                    Save Changes
+                <div className="mt-5 flex justify-start">
+                  <button 
+                    onClick={handleSaveWorkspace}
+                    disabled={wsSaveStatus !== "idle"}
+                    className="flex min-w-[120px] items-center justify-center rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {wsSaveStatus === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : wsSaveStatus === "saved" ? "Saved!" : "Save Workspace"}
                   </button>
                 </div>
               </div>
@@ -379,36 +563,8 @@ const SettingsPanel = () => {
                   </button>
                 </div>
               </div>
-
-              {workspace.role === "OWNER" && (
-                <div className="rounded-xl border border-red-200 bg-red-50 p-6 shadow-sm">
-                  <h3 className="text-base font-bold text-red-700">
-                    Danger Zone
-                  </h3>
-                  <p className="mt-1 text-sm text-red-600/80">
-                    Permanently delete this workspace and all of its data. This action cannot be undone.
-                  </p>
-                  <div className="mt-5">
-                    <button 
-                      onClick={() => setIsDeleteModalOpen(true)}
-                      className="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 disabled:opacity-50"
-                    >
-                      Delete Workspace
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           )}
-
-          <ConfirmDeleteModal
-            isOpen={isDeleteModalOpen}
-            onClose={() => setIsDeleteModalOpen(false)}
-            onConfirm={handleDeleteWorkspace}
-            title="Delete Workspace"
-            description="Are you absolutely sure you want to delete this workspace? All data including projects, tasks, and members will be permanently erased. This action cannot be undone."
-            isDeleting={isDeleting}
-          />
 
           {/* Language Section */}
           {activeTab === "language" && (

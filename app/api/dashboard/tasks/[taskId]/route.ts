@@ -80,7 +80,7 @@ export async function PATCH(
       where: { id: taskId },
       data: updateData,
       include: {
-        assignee: { select: { name: true, email: true } }
+        assignee: { select: { name: true, email: true, image: true } }
       }
     });
 
@@ -92,6 +92,7 @@ export async function PATCH(
       dueDate: updated.dueDate?.toISOString() ?? null,
       assigneeName: updated.assignee?.name ?? null,
       assigneeEmail: updated.assignee?.email ?? null,
+      assigneeImage: updated.assignee?.image ?? null,
       projectId: updated.projectId,
     };
 

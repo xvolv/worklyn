@@ -25,9 +25,9 @@ const DashboardHeader = () => {
   const { isOpen, toggle } = useSidebar();
   const userName = session?.user?.name || "User";
   const userEmail = session?.user?.email;
-  const avatarUrl = userEmail
+  const avatarUrl = session?.user?.image || (userEmail
     ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${userEmail}`
-    : "";
+    : "");
 
   const params = useParams() as { slug?: string };
 

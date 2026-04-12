@@ -226,11 +226,15 @@ const MembersPageClient = ({ members: initialMembers }: MembersPageClientProps) 
                 {/* Member */}
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-3">
-                    <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${getAvatarColor(m.name)}`}
-                    >
-                      {getInitials(m.name)}
-                    </div>
+                    {m.image ? (
+                      <img src={m.image} alt={m.name} className="h-9 w-9 shrink-0 rounded-full object-cover shadow-sm bg-muted" />
+                    ) : (
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${getAvatarColor(m.name)}`}
+                      >
+                        {getInitials(m.name)}
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm font-semibold text-foreground">
                         {m.name}
