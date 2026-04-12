@@ -155,7 +155,7 @@ export async function POST(
       );
     }
 
-    // Create or update invitation
+    // Create or update invitation with inclusions for UI enrichment
     const invitation = await prisma.workspaceInvitation.upsert({
       where: {
         workspaceId_invitedUserId: {
@@ -169,13 +169,26 @@ export async function POST(
         invitedUserId: userId,
         invitedById: session.user.id,
       },
+      include: {
+        workspace: { select: { name: true } },
+        invitedBy: { select: { name: true } },
+      }
     });
+
+    // Map to the interface expected by DashboardSidebar
+    const sidebarInvitation = {
+      id: invitation.id,
+      workspaceId: invitation.workspaceId,
+      workspaceName: invitation.workspace.name,
+      invitedByName: invitation.invitedBy?.name || "Someone",
+      createdAt: invitation.createdAt.toISOString(),
+    };
 
     // Emit real-time invitation
     const io = getIO();
     if (io) {
-      io.to(userId).emit("new-invitation", invitation);
-      console.log(`Emitted live invitation to user room: ${userId}`);
+      io.to(userId).emit("new-invitation", sidebarInvitation);
+      console.log(`Emitted live enriched invitation to user room: ${userId}`);
     } else {
       console.warn("Socket.io instance not found in invitation API");
     }
