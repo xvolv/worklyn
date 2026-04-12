@@ -38,12 +38,12 @@ const DashboardHeader = () => {
   };
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border bg-white px-8">
+    <header className=" sticky  top-0 z-10 flex h-16 items-center justify-between border-b border-border bg-white pl-1 pr-8">
       {/* Left: Toggle + Search */}
       <div className="flex items-center gap-3">
         <button
           onClick={toggle}
-          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="rounded-none p-2 text-muted-foreground transition-colors hover:text-foreground"
           aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
         >
           {isOpen ? <PanelLeftClose className="h-5 w-5" /> : <Menu className="h-5 w-5" />}

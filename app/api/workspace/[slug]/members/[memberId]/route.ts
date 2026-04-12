@@ -46,6 +46,7 @@ export async function DELETE(
 
     const targetMembership = await prisma.workspaceMember.findUnique({
       where: { id: memberId },
+      include: { user: true }
     });
 
     if (!targetMembership) {

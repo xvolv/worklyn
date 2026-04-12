@@ -15,6 +15,7 @@ import {
   X,
   Sparkles,
   ImagePlus,
+  Hand
 } from "lucide-react";
 
 type WorkspaceCard = {
@@ -125,10 +126,10 @@ export default function WorkspacesHome({
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {getGreeting()}, {firstName}
-        </h1>
+      <div className="">
+        <div className="text-2xl font-bold tracking-tight text-gray-600">
+        {getGreeting()}, {firstName}
+        </div>
         <p className="mt-1 text-sm text-muted-foreground">
           Select a workspace or create a new one to get started.
         </p>
@@ -141,7 +142,7 @@ export default function WorkspacesHome({
             <Link
               key={ws.id}
               href={`/w/${ws.slug}/dashboard`}
-              className="group relative overflow-hidden rounded-xl border border-border bg-white shadow-sm transition-all hover:shadow-md hover:border-indigo-200"
+              className="group relative overflow-hidden rounded-sm border border-border bg-white shadow-none transition-all hover:shadow-none hover:border-gray-200"
             >
               <div
                 className={`h-2 bg-gradient-to-r from-gray-500 to-gray-600`}
@@ -183,7 +184,7 @@ export default function WorkspacesHome({
           {/* Create New Card */}
           <button
             onClick={() => setShowModal(true)}
-            className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border bg-white/50 p-8 text-muted-foreground transition-all hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-600"
+            className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border bg-white/50 p-8 text-muted-foreground transition-all hover:border-gray-300 hover:bg-gray-50/50 hover:text-gray-600"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-dashed border-current">
               <Plus className="h-5 w-5" />

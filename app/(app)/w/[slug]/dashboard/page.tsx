@@ -32,7 +32,7 @@ export default async function DashboardPage({
   const [stats, activities, deadlines, performanceData, featuredProject] =
     await Promise.all([
       getDashboardStats(workspace.id),
-      getRecentActivity(workspace.id, 6),
+      getRecentActivity(workspace.id, 30),
       getUpcomingDeadlines(workspace.id, 4),
       getPerformanceData(workspace.id, "7D"),
       getFeaturedProject(workspace.id),

@@ -170,7 +170,7 @@ export async function POST(
         invitedById: session.user.id,
       },
       include: {
-        workspace: { select: { name: true } },
+        workspace: { select: { name: true, description: true } },
         invitedBy: { select: { name: true } },
       }
     });
@@ -180,6 +180,7 @@ export async function POST(
       id: invitation.id,
       workspaceId: invitation.workspaceId,
       workspaceName: invitation.workspace.name,
+      workspaceDescription: invitation.workspace.description,
       invitedByName: invitation.invitedBy?.name || "Someone",
       createdAt: invitation.createdAt.toISOString(),
     };

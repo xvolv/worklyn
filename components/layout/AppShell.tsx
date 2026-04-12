@@ -19,6 +19,7 @@ export type SidebarInvitation = {
   id: string;
   workspaceId: string;
   workspaceName: string;
+  workspaceDescription?: string | null;
   invitedByName: string;
   createdAt: string;
 };

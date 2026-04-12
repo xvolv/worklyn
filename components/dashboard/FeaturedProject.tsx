@@ -16,21 +16,14 @@ const FeaturedProject = ({ data }: FeaturedProjectProps) => {
   ];
 
   return (
-    <div className="relative overflow-hidden rounded-xl bg-gray-900 shadow-sm animate-fade-in-up animation-delay-200">
+    <div className="relative overflow-hidden rounded-none bg-gray-800 shadow-sm animate-fade-in-up animation-delay-200">
       {/* Header */}
       <div className="flex items-center justify-between px-6 pt-5">
         <h2 className="text-sm font-semibold text-gray-200">Featured Project</h2>
-        <Link
-          href="#"
-          className="flex items-center gap-1 text-xs font-medium text-indigo-400 transition-colors hover:text-indigo-300"
-        >
-          View Board
-          <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
       </div>
 
       {/* Hero Image */}
-      <div className="mx-5 mt-4 mb-5 relative overflow-hidden rounded-lg h-[200px]">
+      <div className="mx-5 mt-4 mb-5 relative overflow-hidden rounded-none h-[200px]">
         <Image
           src={data.imageUrl || "/featured-project-hero.png"}
           alt={data.name}

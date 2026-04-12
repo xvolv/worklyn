@@ -33,7 +33,7 @@ export default async function AppLayout({
   const pendingInvitations = await prisma.workspaceInvitation.findMany({
     where: { invitedUserId: session.user.id, status: "PENDING" },
     include: {
-      workspace: { select: { id: true, name: true } },
+      workspace: { select: { id: true, name: true, description: true } },
       invitedBy: { select: { name: true, email: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -57,6 +57,7 @@ export default async function AppLayout({
     id: inv.id,
     workspaceId: inv.workspace.id,
     workspaceName: inv.workspace.name,
+    workspaceDescription: inv.workspace.description,
     invitedByName: inv.invitedBy.name,
     createdAt: inv.createdAt.toISOString(),
   }));

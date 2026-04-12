@@ -74,7 +74,7 @@ export default function CreateTaskModal({
 }: CreateTaskModalProps) {
   const router = useRouter();
   const ctx = useContext(WorkspaceContext);
-  
+
   const effectiveSlug = workspaceSlug || ctx?.slug;
   const titleInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -100,7 +100,7 @@ export default function CreateTaskModal({
         .then((data) => {
           if (data.members) setMembers(data.members);
         })
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setLoadingMembers(false));
     }
   }, [isOpen, effectiveSlug, members.length]);
@@ -198,9 +198,8 @@ export default function CreateTaskModal({
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-50 bg-black/40 backdrop-blur-[3px] transition-opacity duration-200 ${
-          isClosing ? "opacity-0" : "opacity-100"
-        }`}
+        className={`fixed inset-0 z-50 bg-black/40 backdrop-blur-[3px] transition-opacity duration-200 ${isClosing ? "opacity-0" : "opacity-100"
+          }`}
         onClick={handleClose}
       />
 
@@ -208,17 +207,21 @@ export default function CreateTaskModal({
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
           ref={modalRef}
-          className={`relative w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-200 ${
-            isClosing
+          className={`relative w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-200 ${isClosing
               ? "scale-95 opacity-0"
               : "scale-100 opacity-100 animate-modal-in"
-          }`}
+            }`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Success Overlay */}
           {success && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/95 backdrop-blur-sm animate-modal-in">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
+            <div className="absolute z-10 
+top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+w-64 p-6
+flex flex-col items-center justify-center 
+bg-white/95 backdrop-blur-sm rounded-xl shadow-lg 
+animate-modal-in">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50">
                 <CheckCircle2 className="h-8 w-8 text-emerald-500 animate-bounce" />
               </div>
               <p className="mt-4 text-lg font-semibold text-foreground">
@@ -291,11 +294,10 @@ export default function CreateTaskModal({
                 />
                 <div className="mt-1 flex justify-end">
                   <span
-                    className={`text-[11px] ${
-                      titleCharCount > 160
+                    className={`text-[11px] ${titleCharCount > 160
                         ? "text-amber-500"
                         : "text-muted-foreground/50"
-                    }`}
+                      }`}
                   >
                     {titleCharCount}/200
                   </span>

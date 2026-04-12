@@ -1,4 +1,8 @@
-import { MoreHorizontal } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { MoreHorizontal, Activity, RefreshCw } from "lucide-react";
 import type { ActivityItem } from "./DashboardClient";
 
 const typeBadgeConfig: Record<string, { label: string; color: string }> = {
@@ -30,19 +34,54 @@ interface RecentActivityProps {
 }
 
 const RecentActivity = ({ data }: RecentActivityProps) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const router = useRouter();
+
   return (
     <div className="rounded-none border border-border bg-white p-5  animate-fade-in-up animation-delay-400">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between relative">
         <h2 className="text-sm font-semibold text-foreground">Recent Activity</h2>
-        <button className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+        <button 
+          onClick={() => setMenuOpen(!menuOpen)}
+          className={`rounded-lg p-1 transition-colors hover:bg-muted hover:text-foreground ${menuOpen ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+        >
           <MoreHorizontal className="h-4 w-4" />
         </button>
+
+        {menuOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+            <div className="absolute right-0 top-full mt-1 w-40 z-50 rounded-lg border border-border bg-white p-1 shadow-lg animate-in fade-in zoom-in-95">
+              <button 
+                onClick={() => {
+                  setMenuOpen(false);
+                  router.refresh();
+                }}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Refresh Feed
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Activity List */}
-      <div className="mt-4 space-y-0">
-        {data.map((activity) => {
+      <div className="mt-4 space-y-0 max-h-[350px] overflow-y-auto custom-scrollbar pr-2">
+        {data.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center animate-fade-in">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 mb-3 border border-gray-100">
+              <Activity className="h-4 w-4 text-gray-400" />
+            </div>
+            <h3 className="text-[13px] font-semibold text-gray-900">No recent activity</h3>
+            <p className="text-[11px] text-gray-500 mt-1 max-w-[200px] leading-relaxed mx-auto">
+              When your team starts creating projects and adding tasks, their actions will appear here.
+            </p>
+          </div>
+        ) : (
+        data.map((activity) => {
           const badge = typeBadgeConfig[activity.type] ?? {
             label: activity.type,
             color: "bg-gray-50 text-gray-600",
@@ -88,13 +127,8 @@ const RecentActivity = ({ data }: RecentActivityProps) => {
               </div>
             </div>
           );
-        })}
+        }))}
       </div>
-
-      {/* Load More */}
-      <button className="mt-3 w-full rounded-lg border border-border py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-        View All Activity
-      </button>
     </div>
   );
 };

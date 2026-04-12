@@ -203,6 +203,7 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
 
     return (
       <div key={ws.id} className="relative">
+    
         <div className="group flex w-full items-center justify-between rounded-lg hover:bg-muted/50 transition-colors">
           {/* Workspace header left / click to expand */}
           <button
@@ -477,7 +478,11 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
               width={128}
               height={32}
             />
+            <span>
+              <div className="relative left-24 w-16 border  border-gray-500 bg-red-500 text-red-500"></div>
+            </span>
           </Link>
+        
           <button
             onClick={close}
             className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
@@ -513,7 +518,7 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
         </nav>
 
         {/* Workspaces VSCode Layout */}
-        <div className="flex-1 overflow-y-auto w-full flex flex-col">
+        <div className="flex-1 overflow-y-auto w-full flex flex-col custom-scrollbar">
           
           {/* OWN WORKSPACES */}
           {ownWorkspaces.length > 0 && (
@@ -587,10 +592,17 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
           <div>
             <button
               onClick={() => setShowInvitations(!showInvitations)}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             >
-              <Bell className="h-[18px] w-[18px] shrink-0 text-indigo-600" />
-              Invitations
+              <div className="flex items-center gap-2">
+                {showInvitations ? (
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
+                ) : (
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
+                )}
+                <Bell className="h-[18px] w-[18px] shrink-0 text-gray-600" />
+              </div>
+              <span>Invitations</span>
               {localInvitations.length > 0 && (
                 <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-600 px-1.5 text-[10px] font-bold text-white">
                   {localInvitations.length}
@@ -599,7 +611,7 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
             </button>
 
             {showInvitations && (
-              <div className="ml-3 mt-1 space-y-2 pb-2">
+              <div className="ml-3 mt-1 space-y-2 pb-2 max-h-[220px] overflow-y-auto custom-scrollbar">
                 {localInvitations.length > 0 ? (
                   localInvitations.map((inv) => (
                     <div
@@ -609,7 +621,15 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
                       <p className="text-xs font-semibold text-foreground">
                         {inv.workspaceName}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      {inv.workspaceDescription && (
+                        <div className="mt-1 max-h-20 overflow-y-auto pr-1 custom-scrollbar">
+                          <p className="text-[10px] text-muted-foreground italic border-l-2 border-border pl-2 py-0.5 leading-relaxed break-words">
+                            "{inv.workspaceDescription}"
+                          </p>
+                        </div>
+                      )}
+                      <p className="mt-1.5 text-[11px] text-muted-foreground flex items-center gap-1.5">
+                        <span className="h-1 w-1 rounded-full bg-indigo-400" />
                         Invited by {inv.invitedByName}
                       </p>
                       <div className="mt-2 flex items-center gap-2">
@@ -637,7 +657,7 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-lg border border-dashed border-border bg-muted/10 p-4 text-center">
+                  <div className="rounded-none   bg-muted/96 p-1 text-center">
                     <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
                       No pending invitations
                     </p>

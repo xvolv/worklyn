@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const name = formData.get("name") as string;
+    const description = formData.get("description") as string | null;
     const coverImage = formData.get("coverImage") as File | null;
 
     if (!name || name.trim().length === 0) {
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
     const workspace = await prisma.workspace.create({
       data: {
         name: name.trim(),
+        description: description?.trim() || null,
         slug,
         imageUrl,
         members: {

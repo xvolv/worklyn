@@ -7,6 +7,7 @@ import { Building2, ImagePlus, Loader2 } from "lucide-react";
 export default function NewWorkspacePage() {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,6 +40,7 @@ export default function NewWorkspacePage() {
     try {
       const formData = new FormData();
       formData.append("name", name.trim());
+      formData.append("description", description.trim());
       if (coverImage) {
         formData.append("coverImage", coverImage);
       }
@@ -108,6 +110,25 @@ export default function NewWorkspacePage() {
               URL: <span className="font-medium text-gray-700">/w/{slug}</span>
             </p>
           )}
+        </div>
+
+        <div>
+          <label
+            htmlFor="ws-description"
+            className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-foreground"
+          >
+            Workspace Description
+            <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+          </label>
+          <textarea
+            id="ws-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="What is this workspace for?"
+            rows={3}
+            className="w-full rounded-lg border border-border bg-muted/30 p-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-200 resize-none"
+            disabled={isSubmitting}
+          />
         </div>
 
         <div>
