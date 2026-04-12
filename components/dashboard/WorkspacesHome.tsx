@@ -33,13 +33,11 @@ interface WorkspacesHomeProps {
 
 const roleLabel: Record<string, string> = {
   OWNER: "Owner",
-  ADMIN: "Admin",
   MEMBER: "Member",
 };
 
 const roleIcon: Record<string, React.ReactNode> = {
   OWNER: <ShieldCheck className="h-3 w-3 text-indigo-500" />,
-  ADMIN: <Shield className="h-3 w-3 text-amber-500" />,
   MEMBER: null,
 };
 

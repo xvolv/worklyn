@@ -1,10 +1,10 @@
 "use client";
 import { useSession } from "@/lib/auth/auth-client";
 import { signOut } from "@/lib/auth/auth-client";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 
-import { Search, Bell, MessageSquare, LogOut, User, Settings, Menu, PanelLeftClose } from "lucide-react";
+import { Search, MessageSquare, LogOut, User, Settings, Menu, PanelLeftClose } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,10 +16,10 @@ import {
 import { useSidebar } from "./SidebarContext";
 
 interface DashboardHeaderProps {
-  invitationCount?: number;
+  // invitationCount no longer needed in header
 }
 
-const DashboardHeader = ({ invitationCount = 0 }: DashboardHeaderProps) => {
+const DashboardHeader = () => {
   const router = useRouter();
   const { data: session } = useSession();
   const { isOpen, toggle } = useSidebar();
@@ -28,6 +28,8 @@ const DashboardHeader = ({ invitationCount = 0 }: DashboardHeaderProps) => {
   const avatarUrl = userEmail
     ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${userEmail}`
     : "";
+
+  const params = useParams() as { slug?: string };
 
   const handleLogout = async () => {
     await signOut();
@@ -59,20 +61,24 @@ const DashboardHeader = ({ invitationCount = 0 }: DashboardHeaderProps) => {
 
       {/* Right Actions */}
       <div className="flex items-center gap-3">
-        <button className="relative rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-          <Bell className="h-5 w-5" />
-          {invitationCount > 0 && (
-            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
-              {invitationCount}
-            </span>
-          )}
-        </button>
-        <button className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-          <MessageSquare className="h-5 w-5" />
-        </button>
-        <button className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+        {/* Chat Icon - Only visible if inside a workspace */}
+        {params.slug && (
+          <Link 
+            href={`/w/${params.slug}/chat`}
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            title="Team Chat"
+          >
+            <MessageSquare className="h-5 w-5" />
+          </Link>
+        )}
+
+        {/* Feedback Link */}
+        <a 
+          href="mailto:support@worklyn.com?subject=Worklyn Feedback"
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground mx-2"
+        >
           Feedback
-        </button>
+        </a>
 
         {/* Avatar Dropdown */}
         <DropdownMenu>

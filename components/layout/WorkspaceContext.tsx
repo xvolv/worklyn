@@ -7,10 +7,10 @@ export type WorkspaceContextValue = {
   name: string;
   slug: string;
   inviteCode: string;
-  role: string; // "OWNER" | "ADMIN" | "MEMBER"
+  role: string; // "OWNER" | "MEMBER"
 };
 
-const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
+export const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
 export function WorkspaceProvider({
   value,

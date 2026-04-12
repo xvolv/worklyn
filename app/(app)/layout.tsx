@@ -41,6 +41,7 @@ export default async function AppLayout({
 
   const workspaces = memberships.map((m) => ({
     id: m.workspace.id,
+    membershipId: m.id,
     name: m.workspace.name,
     slug: m.workspace.slug,
     role: m.role,
@@ -61,7 +62,7 @@ export default async function AppLayout({
   }));
 
   return (
-    <AppShell workspaces={workspaces} invitations={invitations}>
+    <AppShell workspaces={workspaces} invitations={invitations} currentUserId={session.user.id}>
       {children}
     </AppShell>
   );

@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { FolderKanban, Plus, Clock, Users } from "lucide-react";
+import { FolderKanban, Plus, Clock, Users, Trash2 } from "lucide-react";
+
 import CreateProjectModal from "./CreateProjectModal";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import { useWorkspace } from "../layout/WorkspaceContext";
 
 type ProjectItem = {
@@ -21,14 +23,35 @@ interface ProjectsIndexClientProps {
   projects: ProjectItem[];
 }
 
-export default function ProjectsIndexClient({ projects }: ProjectsIndexClientProps) {
+export default function ProjectsIndexClient({ projects: initialProjects }: ProjectsIndexClientProps) {
   const workspace = useWorkspace();
   const isOwner = workspace.role === "OWNER";
+  const [projects, setProjects] = useState(initialProjects);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [deleteData, setDeleteData] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteProject = async () => {
+    if (!deleteData) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/dashboard/projects/${deleteData.id}`, { method: "DELETE" });
+      if (res.ok) {
+        router.refresh();
+      } else {
+        alert("Failed to delete project");
+      }
+    } catch (error) {
+      alert("Error deleting project");
+    } finally {
+      setIsDeleting(false);
+      setDeleteData(null);
+    }
+  };
 
   useEffect(() => {
     if (searchParams.get("new") === "true") {
@@ -84,9 +107,27 @@ export default function ProjectsIndexClient({ projects }: ProjectsIndexClientPro
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
                   <FolderKanban className="h-6 w-6" />
                 </div>
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                  {proj.status}
-                </span>
+                <div className="flex items-center gap-2 relative z-10">
+                  <span className="rounded-full bg-gray-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                    {proj.status}
+                  </span>
+                   <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDeleteData({ id: proj.id, name: proj.name });
+                    }}
+                    className={`rounded-full p-1.5 transition-colors disabled:opacity-50 ${
+                      isOwner 
+                        ? "text-gray-400 hover:bg-red-50 hover:text-red-600" 
+                        : "text-gray-300 opacity-50 cursor-not-allowed"
+                    }`}
+                    title={isOwner ? "Delete Project" : "Only Owners can delete projects"}
+                    disabled={!isOwner}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
               <h3 className="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
                 {proj.name}
@@ -112,6 +153,16 @@ export default function ProjectsIndexClient({ projects }: ProjectsIndexClientPro
       )}
 
       <CreateProjectModal isOpen={isProjectModalOpen} onClose={() => setIsProjectModalOpen(false)} />
+      
+      <ConfirmDeleteModal
+        isOpen={!!deleteData}
+        onClose={() => !isDeleting && setDeleteData(null)}
+        onConfirm={handleDeleteProject}
+        title="Delete Project"
+        itemName={deleteData?.name}
+        description="Are you sure you want to delete this project? All associated tasks, activities, and comments will be permanently erased. This action cannot be undone."
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

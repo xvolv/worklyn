@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useWorkspace } from "../layout/WorkspaceContext";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import {
   User,
   Bell,
@@ -37,6 +40,31 @@ const SettingsPanel = () => {
   const [emailNotif, setEmailNotif] = useState(true);
   const [pushNotif, setPushNotif] = useState(true);
   const [weeklyDigest, setWeeklyDigest] = useState(false);
+  
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  
+  const router = useRouter();
+  const workspace = useWorkspace();
+
+  const handleDeleteWorkspace = async () => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/workspace/${workspace.slug}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete workspace");
+      
+      router.push("/");
+      router.refresh(); // Wait or immediately go
+    } catch (error) {
+      console.error(error);
+      alert("Failed to delete workspace.");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+    }
+  };
 
   return (
     <div className="mx-auto w-full max-w-7xl">
@@ -351,8 +379,36 @@ const SettingsPanel = () => {
                   </button>
                 </div>
               </div>
+
+              {workspace.role === "OWNER" && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-6 shadow-sm">
+                  <h3 className="text-base font-bold text-red-700">
+                    Danger Zone
+                  </h3>
+                  <p className="mt-1 text-sm text-red-600/80">
+                    Permanently delete this workspace and all of its data. This action cannot be undone.
+                  </p>
+                  <div className="mt-5">
+                    <button 
+                      onClick={() => setIsDeleteModalOpen(true)}
+                      className="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 disabled:opacity-50"
+                    >
+                      Delete Workspace
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
+
+          <ConfirmDeleteModal
+            isOpen={isDeleteModalOpen}
+            onClose={() => setIsDeleteModalOpen(false)}
+            onConfirm={handleDeleteWorkspace}
+            title="Delete Workspace"
+            description="Are you absolutely sure you want to delete this workspace? All data including projects, tasks, and members will be permanently erased. This action cannot be undone."
+            isDeleting={isDeleting}
+          />
 
           {/* Language Section */}
           {activeTab === "language" && (

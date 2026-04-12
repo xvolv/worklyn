@@ -7,6 +7,7 @@ import DashboardHeader from "./DashboardHeader";
 
 export type SidebarWorkspace = {
   id: string;
+  membershipId: string;
   name: string;
   slug: string;
   role: string;
@@ -25,25 +26,27 @@ export type SidebarInvitation = {
 interface AppShellProps {
   workspaces: SidebarWorkspace[];
   invitations: SidebarInvitation[];
+  currentUserId: string;
   children: React.ReactNode;
 }
 
 function ShellInner({
   workspaces,
   invitations,
+  currentUserId,
   children,
 }: AppShellProps) {
   const { isOpen, width, isDragging } = useSidebar();
 
   return (
     <div className="flex min-h-screen bg-[#f5f6fa]">
-      <DashboardSidebar workspaces={workspaces} invitations={invitations} />
+      <DashboardSidebar workspaces={workspaces} invitations={invitations} currentUserId={currentUserId} />
 
       <div
         className={`flex flex-1 flex-col ${isDragging ? "" : "transition-[margin] duration-300 ease-in-out"}`}
         style={{ marginLeft: isOpen ? `${width}px` : 0 }}
       >
-        <DashboardHeader invitationCount={invitations.length} />
+        <DashboardHeader />
         <main className="flex-1 overflow-y-auto px-8 py-6">{children}</main>
       </div>
     </div>

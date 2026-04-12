@@ -2,6 +2,7 @@ import express from "express";
 import next from "next";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import { setIO } from "./lib/socket-io";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -23,14 +24,17 @@ app.prepare().then(() => {
   io.on("connection", (socket) => {
     console.log("A client connected:", socket.id);
 
+    socket.on("join", (userId) => {
+      socket.join(userId);
+      console.log(`User ${userId} joined room ${userId}`);
+    });
+
     socket.on("disconnect", () => {
       console.log("A client disconnected:", socket.id);
     });
   });
 
-  // Make io available globally so we can emit events from our Next.js API routes
-  // (In a real app, you might use a more robust way to share this instance)
-  (global as any).io = io;
+  setIO(io);
 
   server.all(/.*/, (req, res) => {
     return handle(req, res);

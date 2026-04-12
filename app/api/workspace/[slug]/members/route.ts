@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getIO } from "@/lib/socket-io";
 
 export async function GET(
   _req: NextRequest,
@@ -103,7 +104,7 @@ export async function POST(
       return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
     }
 
-    // Verify caller is OWNER or ADMIN
+    // Verify caller is OWNER
     const callerMembership = await prisma.workspaceMember.findUnique({
       where: {
         userId_workspaceId: {
@@ -113,9 +114,9 @@ export async function POST(
       },
     });
 
-    if (!callerMembership || callerMembership.role === "MEMBER") {
+    if (!callerMembership || callerMembership.role !== "OWNER") {
       return NextResponse.json(
-        { error: "Only owners and admins can invite members" },
+        { error: "Only workspace owners can invite members" },
         { status: 403 }
       );
     }
@@ -169,6 +170,15 @@ export async function POST(
         invitedById: session.user.id,
       },
     });
+
+    // Emit real-time invitation
+    const io = getIO();
+    if (io) {
+      io.to(userId).emit("new-invitation", invitation);
+      console.log(`Emitted live invitation to user room: ${userId}`);
+    } else {
+      console.warn("Socket.io instance not found in invitation API");
+    }
 
     return NextResponse.json({ invitation }, { status: 201 });
   } catch (error) {

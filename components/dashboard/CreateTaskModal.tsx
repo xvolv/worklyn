@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useContext } from "react";
 import {
   X,
   ListTodo,
@@ -13,7 +13,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useWorkspace } from "@/components/layout/WorkspaceContext";
+import { WorkspaceContext } from "@/components/layout/WorkspaceContext";
 
 type TaskStatusKey = "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
 type PriorityKey = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
@@ -33,6 +33,7 @@ interface CreateTaskModalProps {
   projectId: string;
   projectName: string;
   defaultStatus: TaskStatusKey;
+  workspaceSlug?: string;
 }
 
 const statusOptions: { key: TaskStatusKey; label: string }[] = [
@@ -69,9 +70,12 @@ export default function CreateTaskModal({
   projectId,
   projectName,
   defaultStatus,
+  workspaceSlug,
 }: CreateTaskModalProps) {
   const router = useRouter();
-  const workspace = useWorkspace();
+  const ctx = useContext(WorkspaceContext);
+  
+  const effectiveSlug = workspaceSlug || ctx?.slug;
   const titleInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -89,9 +93,9 @@ export default function CreateTaskModal({
 
   // Fetch workspace members when modal opens
   useEffect(() => {
-    if (isOpen && members.length === 0) {
+    if (isOpen && members.length === 0 && effectiveSlug) {
       setLoadingMembers(true);
-      fetch(`/api/workspace/${workspace.slug}/members`)
+      fetch(`/api/workspace/${effectiveSlug}/members`)
         .then((res) => res.json())
         .then((data) => {
           if (data.members) setMembers(data.members);
@@ -99,7 +103,7 @@ export default function CreateTaskModal({
         .catch(() => {})
         .finally(() => setLoadingMembers(false));
     }
-  }, [isOpen, workspace.slug]);
+  }, [isOpen, effectiveSlug, members.length]);
 
   // Reset the default status when it changes
   useEffect(() => {

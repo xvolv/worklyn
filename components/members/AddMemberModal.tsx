@@ -48,6 +48,7 @@ export default function AddMemberModal({ isOpen, onClose }: AddMemberModalProps)
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [email, setEmail] = useState("");
+  const [placeholder, setPlaceholder] = useState("colleague@company.com");
   const [searching, setSearching] = useState(false);
   const [result, setResult] = useState<SearchResult | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -83,6 +84,8 @@ export default function AddMemberModal({ isOpen, onClose }: AddMemberModalProps)
   }, [isOpen, adding, onClose]);
 
   const handleSearch = async (e: React.FormEvent) => {
+
+
     e.preventDefault();
     const trimmed = email.trim();
     if (!trimmed) return;
@@ -129,7 +132,11 @@ export default function AddMemberModal({ isOpen, onClose }: AddMemberModalProps)
       }
 
       setAdded(true);
+      setPlaceholder("Add more");
+      setEmail("");
+      // router.refresh() is good to keep for server sync
       router.refresh();
+
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -142,7 +149,7 @@ export default function AddMemberModal({ isOpen, onClose }: AddMemberModalProps)
       await navigator.clipboard.writeText(inviteLink);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {}
+    } catch { }
   };
 
   if (!isOpen) return null;
@@ -199,7 +206,7 @@ export default function AddMemberModal({ isOpen, onClose }: AddMemberModalProps)
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="colleague@company.com"
+                    placeholder={placeholder}
                     className="h-10 w-full rounded-lg border border-border bg-muted/30 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                     disabled={searching || adding}
                   />
@@ -269,13 +276,11 @@ export default function AddMemberModal({ isOpen, onClose }: AddMemberModalProps)
 
             {/* Added Success */}
             {added && result && (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center">
+              <div className="rounded-none  p-4 text-center">
                 <p className="text-sm font-semibold text-emerald-700">
-                  ✓ Invitation sent to {result.name}
+                  Invitation sent to {result.name}
                 </p>
-                <p className="mt-0.5 text-xs text-emerald-600">
-                  They'll see it in their sidebar and can accept or decline.
-                </p>
+
               </div>
             )}
 

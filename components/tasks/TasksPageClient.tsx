@@ -13,9 +13,14 @@ import {
   Plus,
   Search,
   X,
+  MessageCircle,
+  Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useWorkspace } from "@/components/layout/WorkspaceContext";
+import ConfirmDeleteModal from "@/components/dashboard/ConfirmDeleteModal";
 import CreateTaskModal from "@/components/dashboard/CreateTaskModal";
+import TaskComments from "@/components/chat/TaskComments";
 
 /* ------------------------------------------------------------------ */
 /*  TYPES                                                             */
@@ -41,6 +46,8 @@ type ProjectOption = {
 interface TasksPageClientProps {
   tasks: TaskItem[];
   projects: ProjectOption[];
+  workspaceSlug: string;
+  currentUserId: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -203,17 +210,40 @@ const StatusDropdown = ({
 /*  COMPONENT                                                         */
 /* ------------------------------------------------------------------ */
 
-const TasksPageClient = ({ tasks: initialTasks, projects }: TasksPageClientProps) => {
+const TasksPageClient = ({ tasks: initialTasks, projects, workspaceSlug, currentUserId }: TasksPageClientProps) => {
   const router = useRouter();
+  const workspace = useWorkspace();
+  const isOwner = workspace.role === "OWNER";
+  
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("All");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<{ id: string; title: string } | null>(null);
+
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/dashboard/tasks/${taskToDelete.id}`, { method: "DELETE" });
+      if (res.ok) router.refresh();
+      else alert("Failed to delete task");
+    } catch (e) {
+      alert("Error deleting task");
+    } finally {
+      setIsDeleting(false);
+      setTaskToDelete(null);
+    }
+  };
 
   // New Task modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string>(
     projects[0]?.id ?? ""
   );
+
+  // Comments panel state
+  const [commentTask, setCommentTask] = useState<{ id: string; title: string } | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -390,11 +420,12 @@ const TasksPageClient = ({ tasks: initialTasks, projects }: TasksPageClientProps
       {/* Task Table */}
       <div className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
         {/* Table Header */}
-        <div className="grid grid-cols-[1fr_150px_110px_110px_130px] items-center gap-4 border-b border-border bg-muted/30 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+        <div className="grid grid-cols-[1fr_150px_110px_110px_80px_130px] items-center gap-4 border-b border-border bg-muted/30 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
           <div>Task</div>
           <div>Project</div>
           <div>Assignee</div>
           <div>Due Date</div>
+          <div></div>
           <div className="text-right">Status</div>
         </div>
 
@@ -407,7 +438,7 @@ const TasksPageClient = ({ tasks: initialTasks, projects }: TasksPageClientProps
             return (
               <div
                 key={t.id}
-                className={`grid grid-cols-[1fr_150px_110px_110px_130px] items-center gap-4 px-5 py-3.5 transition-colors hover:bg-muted/20 ${
+                className={`grid grid-cols-[1fr_150px_110px_110px_80px_130px] items-center gap-4 px-5 py-3.5 transition-colors hover:bg-muted/20 ${
                   isDone ? "opacity-60" : ""
                 }`}
               >
@@ -471,6 +502,28 @@ const TasksPageClient = ({ tasks: initialTasks, projects }: TasksPageClientProps
                   {due.text}
                 </div>
 
+                {/* Comment & Delete Buttons */}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCommentTask({ id: t.id, title: t.title })}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    title="Comments"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setTaskToDelete({ id: t.id, title: t.title })}
+                    className={`rounded-lg p-1.5 transition-colors disabled:opacity-50 ${
+                      isOwner 
+                        ? "text-muted-foreground hover:bg-red-50 hover:text-red-600" 
+                        : "text-muted-foreground/30 cursor-not-allowed opacity-50"
+                    }`}
+                    title={isOwner ? "Delete Task" : "Only Owners can delete tasks"}
+                    disabled={!isOwner}
+                  >  <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
                 {/* Status Dropdown */}
                 <div className="flex justify-end">
                   <StatusDropdown
@@ -525,6 +578,27 @@ const TasksPageClient = ({ tasks: initialTasks, projects }: TasksPageClientProps
           projectId={selectedProjectId}
           projectName={selectedProjectName}
           defaultStatus="TODO"
+        />
+      )}
+      
+      <ConfirmDeleteModal
+        isOpen={!!taskToDelete}
+        onClose={() => !isDeleting && setTaskToDelete(null)}
+        onConfirm={handleDeleteTask}
+        title="Delete Task"
+        itemName={taskToDelete?.title}
+        description="Are you sure you want to delete this task? All associated comments and activities will be permanently erased. This action cannot be undone."
+        isDeleting={isDeleting}
+      />
+
+      {/* Task Comments Panel */}
+      {commentTask && (
+        <TaskComments
+          taskId={commentTask.id}
+          taskTitle={commentTask.title}
+          workspaceSlug={workspaceSlug}
+          currentUserId={currentUserId}
+          onClose={() => setCommentTask(null)}
         />
       )}
     </div>

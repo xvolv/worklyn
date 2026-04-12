@@ -49,5 +49,12 @@ export default async function TasksPage({
     status: t.status,
   }));
 
-  return <TasksPageClient tasks={serialized} projects={projects} />;
+  return (
+    <TasksPageClient
+      tasks={serialized}
+      projects={projects}
+      workspaceSlug={slug}
+      currentUserId={session.user.id}
+    />
+  );
 }

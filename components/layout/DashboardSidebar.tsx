@@ -22,13 +22,22 @@ import {
   XCircle,
   Loader2,
   Activity,
+  MessageSquare,
+  MoreHorizontal,
+  Trash2,
+  LogOut,
 } from "lucide-react";
 import { useSidebar } from "./SidebarContext";
+import { useEffect } from "react";
+import { useSocket } from "@/lib/socket";
+import ConfirmDeleteModal from "@/components/dashboard/ConfirmDeleteModal";
+import CreateTaskModal from "@/components/dashboard/CreateTaskModal";
 import type { SidebarWorkspace, SidebarInvitation } from "./AppShell";
 
 interface DashboardSidebarProps {
   workspaces: SidebarWorkspace[];
   invitations: SidebarInvitation[];
+  currentUserId: string;
 }
 
 const cardColors = [
@@ -41,11 +50,35 @@ function getColor(name: string): string {
   return cardColors[hash % cardColors.length];
 }
 
-const DashboardSidebar = ({ workspaces, invitations }: DashboardSidebarProps) => {
+const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUserId }: DashboardSidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const { isOpen, width, isDragging, close, startDrag } = useSidebar();
-  
+  const { on, emit } = useSocket();
+
+  const [localInvitations, setLocalInvitations] = useState<SidebarInvitation[]>(invitationsProp);
+
+  // Sync with prop changes
+  useEffect(() => {
+    setLocalInvitations(invitationsProp);
+  }, [invitationsProp]);
+
+  // Handle Socket.IO real-time updates
+  useEffect(() => {
+    if (currentUserId) {
+      emit("join", currentUserId);
+    }
+
+    const cleanup = on("new-invitation", (inv: SidebarInvitation) => {
+      setLocalInvitations(prev => {
+        if (prev.some(p => p.id === inv.id)) return prev;
+        return [inv, ...prev];
+      });
+    });
+
+    return cleanup;
+  }, [on, emit, currentUserId]);
+
   const ownWorkspaces = workspaces.filter(w => w.role === "OWNER");
   const joinedWorkspaces = workspaces.filter(w => w.role !== "OWNER");
 
@@ -69,8 +102,22 @@ const DashboardSidebar = ({ workspaces, invitations }: DashboardSidebarProps) =>
     return joinedWorkspaces.some(ws => pathname.startsWith(`/w/${ws.slug}`));
   });
 
-  const [showInvitations, setShowInvitations] = useState(false);
+  const [showInvitations, setShowInvitations] = useState(true);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
+
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [workspaceToDelete, setWorkspaceToDelete] = useState<SidebarWorkspace | null>(null);
+  const [isDeletingWs, setIsDeletingWs] = useState(false);
+
+  const [activeProjectMenu, setActiveProjectMenu] = useState<string | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
+  
+  const [projectForTask, setProjectForTask] = useState<{ id: string; name: string; slug: string } | null>(null);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+
+  const [workspaceToLeave, setWorkspaceToLeave] = useState<SidebarWorkspace | null>(null);
+  const [isLeavingWs, setIsLeavingWs] = useState(false);
 
   const toggleExpand = (id: string) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -82,11 +129,70 @@ const DashboardSidebar = ({ workspaces, invitations }: DashboardSidebarProps) =>
       await fetch(`/api/workspace/invitations/${invitationId}/${action}`, {
         method: "POST",
       });
+      // Optimistically remove from state
+      setLocalInvitations(prev => prev.filter(i => i.id !== invitationId));
       router.refresh();
     } catch {
       // silent
     } finally {
       setRespondingTo(null);
+    }
+  };
+
+  const handleDeleteWorkspace = async () => {
+    if (!workspaceToDelete) return;
+    setIsDeletingWs(true);
+    try {
+      const res = await fetch(`/api/workspace/${workspaceToDelete.slug}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete workspace");
+      
+      router.push("/dashboard");
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to delete workspace.");
+    } finally {
+      setIsDeletingWs(false);
+      setWorkspaceToDelete(null);
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!projectToDelete) return;
+    setIsDeletingProject(true);
+    try {
+      const res = await fetch(`/api/dashboard/projects/${projectToDelete.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete project");
+      router.refresh();
+    } catch (e) {
+      alert("Error deleting project");
+    } finally {
+      setIsDeletingProject(false);
+      setProjectToDelete(null);
+    }
+  };
+
+  const handleLeaveWorkspace = async () => {
+    if (!workspaceToLeave) return;
+    setIsLeavingWs(true);
+    try {
+      const res = await fetch(`/api/workspace/${workspaceToLeave.slug}/members/${workspaceToLeave.membershipId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to leave workspace");
+      
+      router.push("/dashboard");
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to leave workspace.");
+    } finally {
+      setIsLeavingWs(false);
+      setWorkspaceToLeave(null);
     }
   };
 
@@ -96,26 +202,107 @@ const DashboardSidebar = ({ workspaces, invitations }: DashboardSidebarProps) =>
     const isActiveWs = pathname.startsWith(`/w/${ws.slug}`);
 
     return (
-      <div key={ws.id}>
-        {/* Workspace header */}
-        <button
-          onClick={() => toggleExpand(ws.id)}
-          className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-semibold transition-colors ${
-            isActiveWs
-              ? "text-foreground"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-          }`}
-        >
-          {isExpanded ? (
-            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          )}
-          <div className={`flex h-5 w-5 items-center justify-center rounded ${getColor(ws.name)}`}>
-            <Building2 className="h-3 w-3 text-white" />
+      <div key={ws.id} className="relative">
+        <div className="group flex w-full items-center justify-between rounded-lg hover:bg-muted/50 transition-colors">
+          {/* Workspace header left / click to expand */}
+          <button
+            onClick={() => toggleExpand(ws.id)}
+            className={`flex flex-1 items-center gap-2 px-2 py-1.5 text-sm font-semibold transition-colors focus:outline-none ${
+              isActiveWs
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {isExpanded ? (
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            )}
+            <div className={`flex h-5 w-5 items-center justify-center rounded ${getColor(ws.name)}`}>
+              <Building2 className="h-3 w-3 text-white" />
+            </div>
+            <span className="truncate">{ws.name}</span>
+          </button>
+
+          {/* Right side interactions (3 dots) */}
+          <div className="relative flex items-center pr-2">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setActiveMenu(activeMenu === ws.id ? null : ws.id);
+              }}
+              className={`rounded-md p-1 transition-colors opacity-50 hover:bg-muted-foreground/10 hover:text-foreground ${
+                activeMenu === ws.id ? "text-foreground bg-muted-foreground/10" : "text-muted-foreground opacity-0 group-hover:opacity-100"
+              }`}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+
+            {/* Dropdown Menu */}
+            {activeMenu === ws.id && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveMenu(null);
+                  }}
+                />
+                <div className="absolute right-0 top-full mt-1 w-48 z-50 rounded-lg border border-border bg-white p-1 shadow-lg animate-in fade-in zoom-in-95">
+                  {ws.role === "OWNER" && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setActiveMenu(null);
+                        // Using router.push since it's a URL-based trigger
+                        router.push(`/w/${ws.slug}/projects?new=true`);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                    >
+                      <Plus className="h-4 w-4 shrink-0" />
+                      New Project
+                    </button>
+                  )}
+
+                  {ws.role === "OWNER" && (
+                    <>
+                      <div className="my-1 h-px bg-border/60" />
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setActiveMenu(null);
+                          setWorkspaceToDelete(ws);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4 shrink-0" />
+                        Delete Workspace
+                      </button>
+                    </>
+                  )}
+
+                  {ws.role !== "OWNER" && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setActiveMenu(null);
+                        setWorkspaceToLeave(ws);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="h-4 w-4 shrink-0" />
+                      Leave Workspace
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
-          <span className="truncate">{ws.name}</span>
-        </button>
+        </div>
 
         {/* Expanded content */}
         {isExpanded && (
@@ -157,18 +344,78 @@ const DashboardSidebar = ({ workspaces, invitations }: DashboardSidebarProps) =>
 
             {ws.projects.length > 0 ? (
               ws.projects.map((proj) => (
-                <Link
-                  key={proj.id}
-                  href={`/w/${ws.slug}/projects/${proj.id}`}
-                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors ${
-                    pathname === `/w/${ws.slug}/projects/${proj.id}`
-                      ? "bg-indigo-50 text-indigo-700"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <FolderKanban className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{proj.name}</span>
-                </Link>
+                <div key={proj.id} className="group relative flex items-center justify-between rounded-md transition-colors hover:bg-muted">
+                  <Link
+                    href={`/w/${ws.slug}/projects/${proj.id}`}
+                    className={`flex flex-1 items-center gap-2 px-2 py-1.5 text-[13px] font-medium transition-colors ${
+                      pathname === `/w/${ws.slug}/projects/${proj.id}`
+                        ? "bg-indigo-50 text-indigo-700 rounded-md"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <FolderKanban className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{proj.name}</span>
+                  </Link>
+                  
+                  {/* Project 3-dots Menu (Only for Owners) */}
+                  {ws.role === "OWNER" && (
+                    <div className="relative pr-1">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setActiveProjectMenu(activeProjectMenu === proj.id ? null : proj.id);
+                        }}
+                        className={`rounded hover:bg-muted-foreground/10 p-1 ${
+                          activeProjectMenu === proj.id ? "text-foreground bg-muted-foreground/10" : "text-muted-foreground opacity-0 group-hover:opacity-100"
+                        }`}
+                      >
+                        <MoreHorizontal className="h-3 w-3" />
+                      </button>
+
+                      {activeProjectMenu === proj.id && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-40" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveProjectMenu(null);
+                            }}
+                          />
+                          <div className="absolute right-0 top-full mt-1 w-40 z-50 rounded-lg border border-border bg-white p-1 shadow-lg animate-in fade-in zoom-in-95">
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setActiveProjectMenu(null);
+                                setProjectForTask({ id: proj.id, name: proj.name, slug: ws.slug });
+                                setIsTaskModalOpen(true);
+                              }}
+                              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                            >
+                              <Plus className="h-3.5 w-3.5 shrink-0" />
+                              Add Task
+                            </button>
+
+                            <div className="my-1 h-px bg-border/60" />
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setActiveProjectMenu(null);
+                                setProjectToDelete({ id: proj.id, name: proj.name });
+                              }}
+                              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                              Delete Project
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               ))
             ) : (
               <p className="px-2 py-1 text-[11px] text-muted-foreground/60 italic">
@@ -187,6 +434,18 @@ const DashboardSidebar = ({ workspaces, invitations }: DashboardSidebarProps) =>
               <Users className="h-3.5 w-3.5 shrink-0" />
               Members
             </Link>
+
+                    <Link
+                      href={`/w/${ws.slug}/chat`}
+                      className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors ${
+                        pathname === `/w/${ws.slug}/chat`
+                          ? "bg-indigo-50 text-indigo-700"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                      Chat
+                    </Link>
           </div>
         )}
       </div>
@@ -325,22 +584,24 @@ const DashboardSidebar = ({ workspaces, invitations }: DashboardSidebarProps) =>
         {/* Bottom section */}
         <div className="border-t border-border px-3 py-3 space-y-0.5">
           {/* Invitations */}
-          {invitations.length > 0 && (
-            <div>
-              <button
-                onClick={() => setShowInvitations(!showInvitations)}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-              >
-                <Bell className="h-[18px] w-[18px] shrink-0 text-indigo-600" />
-                Invitations
+          <div>
+            <button
+              onClick={() => setShowInvitations(!showInvitations)}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <Bell className="h-[18px] w-[18px] shrink-0 text-indigo-600" />
+              Invitations
+              {localInvitations.length > 0 && (
                 <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-600 px-1.5 text-[10px] font-bold text-white">
-                  {invitations.length}
+                  {localInvitations.length}
                 </span>
-              </button>
+              )}
+            </button>
 
-              {showInvitations && (
-                <div className="ml-3 mt-1 space-y-2 pb-2">
-                  {invitations.map((inv) => (
+            {showInvitations && (
+              <div className="ml-3 mt-1 space-y-2 pb-2">
+                {localInvitations.length > 0 ? (
+                  localInvitations.map((inv) => (
                     <div
                       key={inv.id}
                       className="rounded-lg border border-border bg-muted/30 p-3"
@@ -374,11 +635,17 @@ const DashboardSidebar = ({ workspaces, invitations }: DashboardSidebarProps) =>
                         </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                  ))
+                ) : (
+                  <div className="rounded-lg border border-dashed border-border bg-muted/10 p-4 text-center">
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                      No pending invitations
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           <Link
             href="/settings"
@@ -415,6 +682,50 @@ const DashboardSidebar = ({ workspaces, invitations }: DashboardSidebarProps) =>
           <div className="h-full w-[2px] mx-auto transition-colors group-hover:bg-indigo-400 group-active:bg-indigo-500" />
         </div>
       </aside>
+
+      <ConfirmDeleteModal
+        isOpen={!!workspaceToDelete}
+        onClose={() => !isDeletingWs && setWorkspaceToDelete(null)}
+        onConfirm={handleDeleteWorkspace}
+        title="Delete Workspace"
+        itemName={workspaceToDelete?.name}
+        description="Are you absolutely sure you want to delete this workspace? All data including projects, tasks, and members will be permanently erased. This action cannot be undone."
+        isDeleting={isDeletingWs}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={!!projectToDelete}
+        onClose={() => !isDeletingProject && setProjectToDelete(null)}
+        onConfirm={handleDeleteProject}
+        title="Delete Project"
+        itemName={projectToDelete?.name}
+        description="Are you sure you want to delete this project? All associated tasks, activities, and comments will be permanently erased. This action cannot be undone."
+        isDeleting={isDeletingProject}
+      />
+
+      {projectForTask && (
+        <CreateTaskModal
+          isOpen={isTaskModalOpen}
+          onClose={() => {
+            setIsTaskModalOpen(false);
+            setTimeout(() => setProjectForTask(null), 200);
+          }}
+          projectId={projectForTask.id}
+          projectName={projectForTask.name}
+          workspaceSlug={projectForTask.slug}
+          defaultStatus="TODO"
+        />
+      )}
+
+      <ConfirmDeleteModal
+        isOpen={!!workspaceToLeave}
+        onClose={() => !isLeavingWs && setWorkspaceToLeave(null)}
+        onConfirm={handleLeaveWorkspace}
+        title="Leave Workspace"
+        itemName={workspaceToLeave?.name}
+        description="Are you sure you want to leave this workspace? You will lose access to all its projects and tasks. You will need a new invite to rejoin."
+        isDeleting={isLeavingWs}
+      />
     </>
   );
 };

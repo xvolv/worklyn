@@ -109,3 +109,66 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ taskId: string }> }
+) {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { taskId } = await params;
+
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: { project: true },
+    });
+
+    if (!task) {
+      return NextResponse.json(
+        { error: "Task not found" },
+        { status: 404 }
+      );
+    }
+
+    const membership = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: session.user.id,
+          workspaceId: task.project.workspaceId,
+        },
+      },
+    });
+
+    if (!membership || membership.role !== "OWNER") {
+      return NextResponse.json(
+        { error: "Only workspace owners can delete tasks" },
+        { status: 403 }
+      );
+    }
+
+    // Capture project details for real-time before delete
+    const projectId = task.projectId;
+
+    await prisma.task.delete({
+      where: { id: taskId },
+    });
+
+    const io = (global as any).io;
+    if (io) {
+      io.emit("task-deleted", { taskId, projectId });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete task:", error);
+    return NextResponse.json(
+      { error: "Failed to delete task" },
+      { status: 500 }
+    );
+  }
+}

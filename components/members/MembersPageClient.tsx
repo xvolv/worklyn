@@ -12,8 +12,11 @@ import {
   Copy,
   Check,
   Link2,
+  Trash2,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useWorkspace } from "@/components/layout/WorkspaceContext";
+import ConfirmDeleteModal from "@/components/dashboard/ConfirmDeleteModal";
 import AddMemberModal from "@/components/members/AddMemberModal";
 
 type MemberItem = {
@@ -33,13 +36,11 @@ interface MembersPageClientProps {
 
 const roleIcon: Record<string, React.ReactNode> = {
   OWNER: <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" />,
-  ADMIN: <Shield className="h-3.5 w-3.5 text-amber-600" />,
   MEMBER: null,
 };
 
 const roleLabel: Record<string, string> = {
   OWNER: "Owner",
-  ADMIN: "Admin",
   MEMBER: "Member",
 };
 
@@ -83,11 +84,32 @@ function timeAgo(dateStr: string): string {
   });
 }
 
-const MembersPageClient = ({ members }: MembersPageClientProps) => {
+const MembersPageClient = ({ members: initialMembers }: MembersPageClientProps) => {
   const workspace = useWorkspace();
+  const isOwner = workspace.role === "OWNER";
+  const [members, setMembers] = useState(initialMembers);
+  const router = useRouter();
+
   const [search, setSearch] = useState("");
   const [copied, setCopied] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  const handleRemoveMember = async () => {
+    if (!memberToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/workspace/${workspace.slug}/members/${memberToDelete.id}`, { method: "DELETE" });
+      if (res.ok) router.refresh();
+      else alert("Failed to remove member. They might be the last owner.");
+    } catch (e) {
+      alert("Error removing member.");
+    } finally {
+      setIsDeleting(false);
+      setMemberToDelete(null);
+    }
+  };
 
   const inviteLink =
     typeof window !== "undefined"
@@ -241,9 +263,17 @@ const MembersPageClient = ({ members }: MembersPageClientProps) => {
 
                 {/* Actions */}
                 <td className="px-5 py-3.5 text-right">
-                  <button className="rounded-lg p-1.5 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:bg-muted hover:text-foreground">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </button>
+                  {isOwner && m.role !== "OWNER" ? (
+                    <button 
+                      onClick={() => setMemberToDelete({ id: m.id, name: m.name })}
+                      className="rounded-lg p-1.5 text-red-400 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                      title="Remove Member"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <div className="h-4 w-4" />
+                  )}
                 </td>
               </tr>
             ))}
@@ -272,6 +302,17 @@ const MembersPageClient = ({ members }: MembersPageClientProps) => {
       <AddMemberModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
+      />
+
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!memberToDelete}
+        onClose={() => !isDeleting && setMemberToDelete(null)}
+        onConfirm={handleRemoveMember}
+        title="Remove Member"
+        itemName={memberToDelete?.name}
+        description="Are you sure you want to remove this member from the workspace? They will lose access to all projects and tasks."
+        isDeleting={isDeleting}
       />
     </div>
   );

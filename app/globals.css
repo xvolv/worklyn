@@ -165,3 +165,18 @@
 .animate-modal-in {
   animation: modalIn 0.2s ease-out both;
 }
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.25s ease-out both;
+}

@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, MessageSquare, Paperclip, Eye, Menu, Filter, FolderKanban, ChevronDown } from "lucide-react";
+import { Plus, MessageSquare, Paperclip, Eye, Menu, Filter, FolderKanban, ChevronDown, Trash2 } from "lucide-react";
 import { useWorkspace } from "../layout/WorkspaceContext";
-import { socket } from "@/lib/socket";
+import { useSocket } from "@/lib/socket";
 import CreateProjectModal from "./CreateProjectModal";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
+import TaskComments from "@/components/chat/TaskComments";
 
 /* ------------------------------------------------------------------ */
 /*  TYPES                                                             */
@@ -125,9 +127,17 @@ function getAvatarColor(name: string | null): string {
 const MyTaskCard = ({
   task,
   onUpdateStatus,
+  onOpenComments,
+  onDeleteTask,
+  isDeleting,
+  isOwner,
 }: {
   task: TaskItem;
   onUpdateStatus: (taskId: string, status: TaskStatusKey) => void;
+  onOpenComments: (task: TaskItem) => void;
+  onDeleteTask?: (taskId: string) => void;
+  isDeleting: boolean;
+  isOwner: boolean;
 }) => {
   return (
     <div className="flex flex-col rounded-xl bg-white p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] transition-shadow hover:shadow-[0_4px_15px_-4px_rgba(6,81,237,0.15)]">
@@ -158,21 +168,30 @@ const MyTaskCard = ({
 
       <div className="flex items-center justify-between mt-auto">
         <div 
-          className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm ${getAvatarColor(task.assigneeName)}`}
+          className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-sm ${getAvatarColor(task.assigneeName)}`}
           title={task.assigneeName || "Unassigned"}
         >
           {getInitials(task.assigneeName)}
         </div>
         
         <div className="flex items-center gap-4 text-gray-400">
-          <div className="flex items-center gap-1.5 text-xs font-medium">
-            <MessageSquare className="h-4 w-4 fill-current opacity-20" />
-            <span>{Math.floor(Math.random() * 8)}</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs font-medium">
-            <Paperclip className="h-4 w-4" />
-            <span>{Math.floor(Math.random() * 4)}</span>
-          </div>
+          <button
+            onClick={() => onOpenComments(task)}
+            className="flex items-center gap-1.5 text-xs font-medium hover:text-gray-600 transition-colors"
+            title="Comments"
+          >
+            <MessageSquare className="h-4 w-4" />
+          </button>
+          {onDeleteTask && isOwner && (
+            <button
+              onClick={() => onDeleteTask(task.id)}
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+              title="Delete task"
+              disabled={isDeleting}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -183,7 +202,17 @@ const MyTaskCard = ({
 /*  TEAM TASK CARD                                                    */
 /* ------------------------------------------------------------------ */
 
-const TeamTaskCard = ({ task }: { task: TaskItem }) => {
+const TeamTaskCard = ({ 
+  task,
+  onDeleteTask,
+  isDeleting,
+  isOwner,
+}: { 
+  task: TaskItem;
+  onDeleteTask?: (taskId: string) => void;
+  isDeleting: boolean;
+  isOwner: boolean;
+}) => {
   const borderColor = statusBorderColors[task.status] || "border-gray-200";
   const stColor = statusColors[task.status] || "text-gray-500";
   
@@ -216,6 +245,16 @@ const TeamTaskCard = ({ task }: { task: TaskItem }) => {
             </span>
           </div>
         </div>
+        {onDeleteTask && isOwner && (
+          <button
+            onClick={() => onDeleteTask(task.id)}
+            disabled={isDeleting}
+            className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+            title="Delete Task"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -233,11 +272,14 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
   
   const [quickTaskTitle, setQuickTaskTitle] = useState("");
   const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [commentTask, setCommentTask] = useState<{ id: string; title: string } | null>(null);
+
+  const { on } = useSocket();
 
   useEffect(() => {
-    socket.connect();
-    
-    socket.on("task-updated", (updatedTask: TaskItem & { projectId: string }) => {
+    const cleanupUpdated = on("task-updated", (updatedTask: TaskItem & { projectId: string }) => {
       setProjectData((prev) => {
         if (prev.id !== updatedTask.projectId) return prev;
         
@@ -250,11 +292,18 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
       });
     });
 
+    const cleanupDeleted = on("task-deleted", (payload: { taskId: string, projectId: string }) => {
+      setProjectData((prev) => {
+        if (prev.id !== payload.projectId) return prev;
+        return { ...prev, tasks: prev.tasks.filter(t => t.id !== payload.taskId) };
+      });
+    });
+
     return () => {
-      socket.off("task-updated");
-      socket.disconnect();
+      cleanupUpdated();
+      cleanupDeleted();
     };
-  }, []);
+  }, [on]);
 
   // Partition logic
   const tasks = projectData.tasks || [];
@@ -270,6 +319,20 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
       });
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/dashboard/tasks/${taskToDelete}`, { method: "DELETE" });
+      if (!res.ok) alert("Failed to delete task");
+    } catch (e) {
+      alert("Error deleting task");
+    } finally {
+      setIsDeleting(false);
+      setTaskToDelete(null);
     }
   };
 
@@ -368,7 +431,15 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
           {/* Tasks List */}
           <div className="flex flex-col gap-4">
             {myTasks.map((task) => (
-              <MyTaskCard key={task.id} task={task} onUpdateStatus={handleUpdateTaskStatus} />
+              <MyTaskCard
+                key={task.id}
+                task={task}
+                onUpdateStatus={handleUpdateTaskStatus}
+                onOpenComments={(t: TaskItem) => setCommentTask({ id: t.id, title: t.title })}
+                onDeleteTask={() => setTaskToDelete(task.id)}
+                isDeleting={isDeleting}
+                isOwner={isOwner}
+              />
             ))}
             {myTasks.length === 0 && (
               <div className="py-12 text-center text-sm font-medium text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
@@ -382,12 +453,17 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
         <div className="lg:col-span-1 rounded-[24px] bg-[#F2F3F8] p-6 lg:p-8">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-[22px] font-bold text-gray-800">Team Tasks</h2>
-            <Eye className="h-5 w-5 text-gray-400" />
           </div>
 
           <div className="flex flex-col gap-4">
             {teamTasks.map((task) => (
-              <TeamTaskCard key={task.id} task={task} />
+              <TeamTaskCard 
+                key={task.id} 
+                task={task} 
+                onDeleteTask={() => setTaskToDelete(task.id)}
+                isDeleting={false}
+                isOwner={isOwner}
+              />
             ))}
             {teamTasks.length === 0 && (
               <div className="py-8 text-center text-[13px] font-medium text-gray-500">
@@ -412,6 +488,26 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
         </div>
       </div>
 
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!taskToDelete}
+        onClose={() => !isDeleting && setTaskToDelete(null)}
+        onConfirm={handleDeleteTask}
+        title="Delete Task"
+        description="Are you sure you want to delete this task? All associated comments and activities will be permanently erased. This action cannot be undone."
+        isDeleting={isDeleting}
+      />
+
+      {/* Task Comments Panel */}
+      {commentTask && (
+        <TaskComments
+          taskId={commentTask.id}
+          taskTitle={commentTask.title}
+          workspaceSlug={workspace.slug}
+          currentUserId={currentUserId}
+          onClose={() => setCommentTask(null)}
+        />
+      )}
     </div>
   );
 };
