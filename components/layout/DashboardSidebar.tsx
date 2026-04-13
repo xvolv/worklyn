@@ -680,17 +680,14 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
           </Link>
           <Link
             href="/help"
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              pathname === "/help"
+                ? "bg-indigo-50 text-indigo-700"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
           >
             <HelpCircle className="h-[18px] w-[18px] shrink-0" />
-            Help
-          </Link>
-          <Link
-            href="/help"
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <Headphones className="h-[18px] w-[18px] shrink-0" />
-            Support
+            Help & Support
           </Link>
         </div>
 

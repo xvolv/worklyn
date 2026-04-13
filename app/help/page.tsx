@@ -7,8 +7,8 @@ export default function HelpCenter() {
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="mx-auto flex-1 w-full max-w-4xl px-4 py-12 sm:px-6">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground mb-4">Help Center</h1>
-        <p className="text-muted-foreground mb-10">How can we assist you today?</p>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground mb-4">Help & Support Center</h1>
+        <p className="text-muted-foreground mb-10">Need a hand? Our support team and documentation are here to help you get the most out of Worklyn.</p>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="border border-border rounded-xl p-6 hover:shadow-md transition-shadow">
