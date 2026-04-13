@@ -679,14 +679,14 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
             Settings
           </Link>
           <Link
-            href="#"
+            href="/help"
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <HelpCircle className="h-[18px] w-[18px] shrink-0" />
             Help
           </Link>
           <Link
-            href="#"
+            href="/help"
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <Headphones className="h-[18px] w-[18px] shrink-0" />

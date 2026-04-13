@@ -112,7 +112,7 @@ const SigninCard = () => {
               PASSWORD
             </label>
             <Link
-              href="#"
+              href="/forgot-password"
               className="text-xs font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground"
             >
               Forgot password?

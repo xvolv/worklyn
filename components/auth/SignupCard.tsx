@@ -296,14 +296,14 @@ const SignupCard = () => {
         <p className="pt-2 text-center text-xs text-muted-foreground">
           By clicking "Sign up", you agree to our{" "}
           <Link
-            href="#"
+            href="/terms"
             className="text-foreground underline underline-offset-4"
           >
             Terms of Service
           </Link>{" "}
           and{" "}
           <Link
-            href="#"
+            href="/privacy"
             className="text-foreground underline underline-offset-4"
           >
             Privacy Policy

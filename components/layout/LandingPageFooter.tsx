@@ -13,15 +13,15 @@ const LandingPageFooter = () => {
       </div>
 
       <div className="flex flex-wrap gap-x-8 gap-y-2">
-        <a className="hover:text-foreground" href="#">
+        <Link className="hover:text-foreground" href="/privacy">
           Privacy Policy
-        </a>
-        <a className="hover:text-foreground" href="#">
+        </Link>
+        <Link className="hover:text-foreground" href="/terms">
           Terms of Service
-        </a>
-        <a className="hover:text-foreground" href="#">
+        </Link>
+        <Link className="hover:text-foreground" href="/help">
           Help Center
-        </a>
+        </Link>
       </div>
     </footer>
   );
