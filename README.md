@@ -15,7 +15,15 @@ It enables teams to create workspaces, manage projects, assign tasks, and collab
 - ✅ Task management with status tracking (Todo, In Progress, Done)  
 - 📊 Workspace dashboard overview  
 - 🧠 Activity tracking system (planned)  
-- ⚡ Clean and responsive UI  
+- ⚡ Clean and responsive UI 
+
+
+
+<img width="1896" height="882" alt="dashboard" src="https://github.com/user-attachments/assets/57d37c7f-a81b-4fdd-9cb2-ec810048627a" />
+<img width="1892" height="886" alt="cuban" src="https://github.com/user-attachments/assets/6c63ba70-98a7-4e8b-9ec5-c3f1f60f262f" />
+
+<img width="1895" height="863" alt="image" src="https://github.com/user-attachments/assets/c29472e7-b9df-4991-b040-c87ec68e7e1d" />
+
 
 ---
 
@@ -64,6 +72,6 @@ In active development 🚀
 
 ## 🌐 Live Demo
 
-Coming soon...
+[(https://worklyn.salx.app/)]
 
 ---
