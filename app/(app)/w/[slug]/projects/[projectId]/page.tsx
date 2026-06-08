@@ -30,6 +30,9 @@ export default async function SingleProjectPage({
         },
         orderBy: { createdAt: "desc" },
       },
+      milestones: {
+        orderBy: { order: "asc" },
+      },
       _count: { select: { tasks: true } },
     },
   });
@@ -46,9 +49,19 @@ export default async function SingleProjectPage({
     progress: project.progress,
     dueDate: project.dueDate?.toISOString() ?? null,
     taskCount: project._count.tasks,
+    milestones: project.milestones.map((m) => ({
+      id: m.id,
+      title: m.title,
+      description: m.description,
+      dueDate: m.dueDate?.toISOString() ?? null,
+      order: m.order,
+    })),
     tasks: project.tasks.map((t) => ({
       id: t.id,
       title: t.title,
+      description: t.description,
+      estimatedHours: t.estimatedHours,
+      milestoneId: t.milestoneId,
       status: t.status,
       priority: t.priority,
       dueDate: t.dueDate?.toISOString() ?? null,

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, MessageSquare, Paperclip, Eye, Menu, Filter, FolderKanban, ChevronDown, Trash2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, MessageSquare, Paperclip, Eye, Menu, Filter, FolderKanban, ChevronDown, Trash2, Sparkles, Send, Loader2, Clock, CheckCircle, X } from "lucide-react";
 import { useWorkspace } from "../layout/WorkspaceContext";
 import { useSocket } from "@/lib/socket";
 import CreateProjectModal from "./CreateProjectModal";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import TaskComments from "@/components/chat/TaskComments";
+import { motion, AnimatePresence } from "framer-motion";
 
 /* ------------------------------------------------------------------ */
 /*  TYPES                                                             */
@@ -28,6 +29,16 @@ type TaskItem = {
   commentCount?: number;
   createdAt?: string;
   updatedAt?: string;
+  estimatedHours?: number | null;
+  milestoneId?: string | null;
+};
+
+type MilestoneItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  dueDate: string | null;
+  order: number;
 };
 
 type ProjectItem = {
@@ -39,6 +50,7 @@ type ProjectItem = {
   dueDate: string | null;
   taskCount: number;
   tasks: TaskItem[];
+  milestones?: MilestoneItem[];
 };
 
 interface ProjectBoardProps {
@@ -362,7 +374,7 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
   const isOwner = workspace.role === "OWNER";
 
   const [projectData, setProjectData] = useState<ProjectItem>(initialProject);
-  const [viewMode, setViewMode] = useState<"PERSONAL" | "TEAM">("PERSONAL");
+  const [viewMode, setViewMode] = useState<"PERSONAL" | "TEAM" | "MILESTONES">("PERSONAL");
   const [filterBy, setFilterBy] = useState<"ALL" | TaskStatusKey>("ALL");
   const [sortBy, setSortBy] = useState<"DEFAULT" | "DUE_DATE" | "PRIORITY">("DEFAULT");
 
@@ -371,6 +383,54 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
   const [commentTask, setCommentTask] = useState<{ id: string; title: string } | null>(null);
 
   const [readReceipts, setReadReceipts] = useState<Record<string, number>>({});
+
+  // AI Copilot state
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatHistory, setChatHistory] = useState<Array<{ role: "user" | "model"; content: string }>>([
+    { role: "model", content: "Hi! I'm your AI Project Copilot. I can analyze milestones, task workloads, estimate hours, and alert you of project health risks. Ask me anything about this project!" }
+  ]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll chat history
+  useEffect(() => {
+    if (isAssistantOpen) {
+      chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatHistory, isAssistantOpen, isChatLoading]);
+
+  // Send prompt to Project Assistant Chat API
+  const handleSendPrompt = async (text: string) => {
+    if (!text.trim() || isChatLoading) return;
+
+    const newMessages = [...chatHistory, { role: "user" as const, content: text.trim() }];
+    setChatHistory(newMessages);
+    setChatInput("");
+    setIsChatLoading(true);
+
+    try {
+      const res = await fetch(`/api/dashboard/projects/${projectData.id}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: newMessages }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to get response from AI");
+      }
+
+      const data = await res.json();
+      setChatHistory([...newMessages, { role: "model" as const, content: data.reply }]);
+    } catch (err) {
+      setChatHistory([
+        ...newMessages,
+        { role: "model" as const, content: "Sorry, I had trouble analyzing the project. Please check if your GEMINI_API_KEY is configured in your .env file." },
+      ]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -508,19 +568,35 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
           </div>
         </div>
 
-        <div className="flex items-center bg-gray-100 rounded-full p-1 border border-gray-200/60 shadow-sm">
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setViewMode("PERSONAL")}
-            className={`rounded-full px-5 py-2 text-[13px] font-bold transition-colors ${viewMode === "PERSONAL" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+            onClick={() => setIsAssistantOpen(true)}
+            className="flex h-9 items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 px-4 text-xs font-bold text-white shadow-md shadow-indigo-600/10 hover:opacity-95 hover:shadow-indigo-600/20 transition-all border border-indigo-500/20"
           >
-            Personal View
+            <Sparkles className="h-3.5 w-3.5" />
+            AI Copilot
           </button>
-          <button
-            onClick={() => setViewMode("TEAM")}
-            className={`rounded-full px-5 py-2 text-[13px] font-bold transition-colors ${viewMode === "TEAM" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
-          >
-            Team View
-          </button>
+
+          <div className="flex items-center bg-gray-100 rounded-full p-1 border border-gray-200/60 shadow-sm">
+            <button
+              onClick={() => setViewMode("PERSONAL")}
+              className={`rounded-full px-5 py-2 text-[13px] font-bold transition-colors ${viewMode === "PERSONAL" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+            >
+              Personal View
+            </button>
+            <button
+              onClick={() => setViewMode("TEAM")}
+              className={`rounded-full px-5 py-2 text-[13px] font-bold transition-colors ${viewMode === "TEAM" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+            >
+              Team View
+            </button>
+            <button
+              onClick={() => setViewMode("MILESTONES")}
+              className={`rounded-full px-5 py-2 text-[13px] font-bold transition-colors ${viewMode === "MILESTONES" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+            >
+              Milestones
+            </button>
+          </div>
         </div>
       </div>
 
@@ -681,6 +757,239 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
         </div>
       )}
 
+      {viewMode === "MILESTONES" && (
+        <div className="space-y-6 animate-fade-in-up">
+          {/* Summary metrics header */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 border border-gray-100 p-5 rounded-2xl mb-2">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+                <FolderKanban className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Total Milestones</span>
+                <p className="text-xl font-extrabold text-gray-900">{projectData.milestones?.length || 0}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                <CheckCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Overall Tasks</span>
+                <p className="text-xl font-extrabold text-gray-900">
+                  {tasks.filter(t => t.status === "DONE").length} / {tasks.length} Completed
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                <Clock className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Estimated Effort</span>
+                <p className="text-xl font-extrabold text-gray-900">
+                  {tasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0)} Total Hours
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {projectData.milestones?.map((milestone) => {
+              const milestoneTasks = tasks.filter(t => t.milestoneId === milestone.id);
+              const doneTasks = milestoneTasks.filter(t => t.status === "DONE");
+              const mHours = milestoneTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+              const mProgress = milestoneTasks.length > 0 ? Math.round((doneTasks.length / milestoneTasks.length) * 100) : 0;
+
+              return (
+                <div key={milestone.id} className="border border-gray-100 bg-white rounded-2xl p-6 shadow-sm">
+                  {/* Milestone Header */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-50 pb-4 mb-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded bg-indigo-50 px-2 py-0.5 text-[9px] font-bold text-indigo-700 uppercase tracking-wider">
+                          Milestone
+                        </span>
+                        {milestone.dueDate && (
+                          <span className="text-[10px] font-medium text-gray-500">
+                            Due {new Date(milestone.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900 mt-1">{milestone.title}</h3>
+                      {milestone.description && (
+                        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{milestone.description}</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-6 shrink-0">
+                      {/* Hours and counts details */}
+                      <div className="text-right hidden md:block">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Effort / Tasks</span>
+                        <span className="text-xs font-bold text-gray-800">
+                          {mHours}h • {doneTasks.length}/{milestoneTasks.length} Done
+                        </span>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="w-32">
+                        <div className="flex items-center justify-between text-[10px] font-bold text-gray-500 mb-1">
+                          <span>Progress</span>
+                          <span>{mProgress}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-indigo-600 rounded-full transition-all duration-500" style={{ width: `${mProgress}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tasks List */}
+                  <div className="space-y-2.5">
+                    {milestoneTasks.map((task) => (
+                      <div key={task.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50/50 hover:bg-gray-50 rounded-xl border border-gray-100 transition-colors">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div className="mt-0.5">
+                            <span className={`text-[9px] font-bold tracking-wider uppercase rounded px-1.5 py-0.5 ${priorityStyles[task.priority] || "text-gray-500 bg-gray-100"}`}>
+                              {task.priority}
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-bold text-gray-800 leading-snug">{task.title}</h4>
+                            {task.description && (
+                              <p className="text-[10px] text-gray-500 mt-0.5 max-w-xl leading-relaxed">{task.description}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Task Control items */}
+                        <div className="flex items-center gap-3 shrink-0 ml-auto sm:ml-0 text-[11px] font-semibold text-gray-600">
+                          {task.estimatedHours && (
+                            <span className="flex items-center gap-1 bg-white border border-gray-200/50 rounded-lg px-2 py-1 text-[10px]">
+                              <Clock className="h-3 w-3 text-gray-400" />
+                              <span>{task.estimatedHours}h</span>
+                            </span>
+                          )}
+                          
+                          {task.dueDate && (
+                            <span className="text-[10px] text-gray-400">
+                              {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </span>
+                          )}
+
+                          <div className="flex items-center gap-1 bg-white border border-gray-200/50 rounded-lg pl-2 pr-1.5 py-0.5 shadow-sm text-[10px]">
+                            <img
+                              src={task.assigneeImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${task.assigneeEmail || task.assigneeName || 'user'}`}
+                              alt={task.assigneeName || "Avatar"}
+                              className="h-4.5 w-4.5 rounded-full object-cover"
+                            />
+                            <span className="text-gray-500 font-medium truncate max-w-[70px]">
+                              {task.assigneeName || "Unassigned"}
+                            </span>
+                          </div>
+
+                          <div className="relative">
+                            <select
+                              value={task.status}
+                              onChange={(e) => handleUpdateTaskStatus(task.id, e.target.value as TaskStatusKey)}
+                              className="appearance-none rounded-lg border border-gray-200 bg-white py-1 pl-2.5 pr-7 text-[10px] font-bold text-gray-700 outline-none hover:bg-gray-50 cursor-pointer shadow-sm"
+                            >
+                              {Object.entries(statusDisplay).map(([key, label]) => (
+                                <option key={key} value={key}>{label}</option>
+                              ))}
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {milestoneTasks.length === 0 && (
+                      <p className="text-xs text-gray-400 text-center py-6">No tasks added to this milestone.</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Unassigned Tasks */}
+            {tasks.filter(t => t.milestoneId === null).length > 0 && (
+              <div className="border border-dashed border-gray-200 bg-gray-50/20 rounded-2xl p-6">
+                <div className="flex items-center justify-between border-b border-dashed border-gray-200 pb-3 mb-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-700">General Tasks (Unassigned)</h3>
+                    <p className="text-[11px] text-gray-400 mt-0.5">Tasks not associated with a specific developmental milestone</p>
+                  </div>
+                  <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-bold text-gray-600">
+                    {tasks.filter(t => t.milestoneId === null).length} Tasks
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {tasks.filter(t => t.milestoneId === null).map((task) => (
+                    <div key={task.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white rounded-xl border border-gray-100 shadow-sm transition-colors hover:border-gray-200">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="mt-0.5">
+                          <span className={`text-[9px] font-bold tracking-wider uppercase rounded px-1.5 py-0.5 ${priorityStyles[task.priority] || "text-gray-500 bg-gray-100"}`}>
+                            {task.priority}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-bold text-gray-800 leading-snug">{task.title}</h4>
+                          {task.description && (
+                            <p className="text-[10px] text-gray-500 mt-0.5 max-w-xl leading-relaxed">{task.description}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Task Control items */}
+                      <div className="flex items-center gap-3 shrink-0 ml-auto sm:ml-0 text-[11px] font-semibold text-gray-600">
+                        {task.estimatedHours && (
+                          <span className="flex items-center gap-1 bg-gray-50 border border-gray-200/50 rounded-lg px-2 py-1 text-[10px]">
+                            <Clock className="h-3 w-3 text-gray-400" />
+                            <span>{task.estimatedHours}h</span>
+                          </span>
+                        )}
+                        
+                        {task.dueDate && (
+                          <span className="text-[10px] text-gray-400">
+                            {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </span>
+                        )}
+
+                        <div className="flex items-center gap-1 bg-gray-50 border border-gray-200/50 rounded-lg pl-2 pr-1.5 py-0.5 shadow-sm text-[10px]">
+                          <img
+                            src={task.assigneeImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${task.assigneeEmail || task.assigneeName || 'user'}`}
+                            alt={task.assigneeName || "Avatar"}
+                            className="h-4.5 w-4.5 rounded-full object-cover"
+                          />
+                          <span className="text-gray-500 font-medium truncate max-w-[70px]">
+                            {task.assigneeName || "Unassigned"}
+                          </span>
+                        </div>
+
+                        <div className="relative">
+                          <select
+                            value={task.status}
+                            onChange={(e) => handleUpdateTaskStatus(task.id, e.target.value as TaskStatusKey)}
+                            className="appearance-none rounded-lg border border-gray-200 bg-white py-1 pl-2.5 pr-7 text-[10px] font-bold text-gray-700 outline-none hover:bg-gray-50 cursor-pointer shadow-sm"
+                          >
+                            {Object.entries(statusDisplay).map(([key, label]) => (
+                              <option key={key} value={key}>{label}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       <ConfirmDeleteModal
         isOpen={!!taskToDelete}
@@ -701,6 +1010,133 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
           onClose={() => setCommentTask(null)}
         />
       )}
+      {/* AI Insights Sidebar */}
+      <AnimatePresence>
+        {isAssistantOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAssistantOpen(false)}
+              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+            />
+            {/* Slide drawer */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 z-50 h-full w-full max-w-md bg-white shadow-2xl border-l border-gray-100 flex flex-col"
+            >
+              {/* Drawer Header */}
+              <div className="p-5 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50">
+                    <Sparkles className="h-[18px] w-[18px] text-indigo-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">Project Copilot</h3>
+                    <p className="text-[10px] text-gray-500">Real-time health & risk analyst</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsAssistantOpen(false)}
+                  className="p-1 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Chat Messages */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar">
+                {chatHistory.map((msg, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex gap-3 max-w-[85%] ${
+                      msg.role === "user" ? "ml-auto flex-row-reverse" : "mr-auto"
+                    }`}
+                  >
+                    <div
+                      className={`h-7 w-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold ${
+                        msg.role === "user" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      {msg.role === "user" ? "U" : "AI"}
+                    </div>
+                    <div
+                      className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                        msg.role === "user"
+                          ? "bg-indigo-600 text-white"
+                          : "bg-gray-50 text-gray-800 border border-gray-100"
+                      }`}
+                    >
+                      <p className="whitespace-pre-line">{msg.content}</p>
+                    </div>
+                  </div>
+                ))}
+                {isChatLoading && (
+                  <div className="flex gap-3 max-w-[85%] mr-auto items-center">
+                    <div className="h-7 w-7 rounded-full bg-gray-100 flex items-center justify-center">
+                      <Loader2 className="h-3.5 w-3.5 text-indigo-600 animate-spin" />
+                    </div>
+                    <div className="bg-gray-50 text-gray-500 text-xs italic rounded-2xl px-4 py-2">
+                      Analyzing project data...
+                    </div>
+                  </div>
+                )}
+                <div ref={chatBottomRef} />
+              </div>
+
+              {/* Quick Template Prompts */}
+              <div className="px-5 pb-3 pt-2 border-t border-gray-50 bg-gray-50/50 flex flex-wrap gap-1.5 shrink-0">
+                <button
+                  onClick={() => handleSendPrompt("Summarize the current progress of this project.")}
+                  disabled={isChatLoading}
+                  className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full px-2.5 py-1 transition-colors"
+                >
+                  📊 Summarize progress
+                </button>
+                <button
+                  onClick={() => handleSendPrompt("What tasks are overdue or at risk of failing?")}
+                  disabled={isChatLoading}
+                  className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full px-2.5 py-1 transition-colors"
+                >
+                  ⚠️ What is at risk?
+                </button>
+                <button
+                  onClick={() => handleSendPrompt("Which high priority task should we work on next?")}
+                  disabled={isChatLoading}
+                  className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full px-2.5 py-1 transition-colors"
+                >
+                  🎯 What next?
+                </button>
+              </div>
+
+              {/* Chat Input */}
+              <div className="p-4 border-t border-gray-100 flex gap-2 shrink-0 bg-white">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSendPrompt(chatInput)}
+                  placeholder="Ask about project health..."
+                  disabled={isChatLoading}
+                  className="flex-1 h-9 rounded-lg border border-gray-200 px-3 text-xs focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400/20 disabled:bg-gray-50"
+                />
+                <button
+                  onClick={() => handleSendPrompt(chatInput)}
+                  disabled={isChatLoading || !chatInput.trim()}
+                  className="h-9 w-9 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center justify-center shadow-md transition-colors disabled:opacity-50"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
