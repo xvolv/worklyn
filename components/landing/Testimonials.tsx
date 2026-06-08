@@ -1,194 +1,167 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { testimonials } from "@/components/landing/testimonialsData";
 
-const CYCLE_MS = 4000;
-const TRANSITION_MS = 900;
+const AUTO_PLAY_MS = 5000;
 
-type CardVariant = "left" | "center" | "right";
-
-type AngleConfig = {
-  rotate: string;
-  scale: string;
-  x: string;
-  z: number;
-};
-
-const variantAngles: Record<CardVariant, AngleConfig> = {
-  left: { rotate: "-6deg", scale: "0.92", x: "-18%", z: 20 },
-  center: { rotate: "0deg", scale: "1", x: "0%", z: 60 },
-  right: { rotate: "6deg", scale: "0.92", x: "18%", z: 20 },
-};
-
-const TestimonialCard = ({
-  testimonial,
-  variant,
-  isActive,
-}: {
-  testimonial: (typeof testimonials)[number];
-  variant: CardVariant;
-  isActive: boolean;
-}) => {
-  const angles = variantAngles[variant];
-
-  const baseRing =
-    variant === "center"
-      ? "ring-2 ring-foreground/10"
-      : "ring-1 ring-foreground/5";
-
-  return (
-    <div
-      className="absolute top-0 left-0 w-full"
-      style={{
-        transform: `translateX(${angles.x}) rotate(${angles.rotate}) scale(${angles.scale})`,
-        zIndex: angles.z,
-        transition: isActive
-          ? `transform ${TRANSITION_MS}ms cubic-bezier(0.25, 0.8, 0.25, 1), opacity ${TRANSITION_MS}ms ease`
-          : "none",
-        opacity: isActive ? 1 : 0.6,
-        transformOrigin: "center top",
-        pointerEvents: isActive ? "auto" : "none",
-      }}
-    >
-      <div
-        className={`w-72 rounded-3xl bg-card p-5 shadow-lg ${baseRing}`}
-      >
-        <div className="mb-3 text-2xl">{testimonial.emoji}</div>
-        <p className="text-sm leading-relaxed text-foreground/80">
-          "{testimonial.quote}"
-        </p>
-
-        <div className="mt-5 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold">
-            {testimonial.name
-              .split(" ")
-              .map((n) => n[0])
-              .join("")}
-          </div>
-          <div className="leading-tight">
-            <div className="text-sm font-semibold">{testimonial.name}</div>
-            <div className="text-xs text-muted-foreground">
-              {testimonial.title}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const Testimonials = () => {
+export default function Testimonials() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [hovered, setHovered] = useState(false);
+  const [paused, setPaused] = useState(false);
 
-  const intervalRef = useRef<number | null>(null);
-  const activeIndexRef = useRef(0);
-  const rafRef = useRef<number>(0);
-  const startRef = useRef(0);
+  useEffect(() => {
+    if (paused) return;
 
-  const clearIntervalTimer = () => {
-    if (intervalRef.current) {
-      window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  };
-
-  const clearAllTimers = () => {
-    clearIntervalTimer();
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-  };
-
-  const variants = useMemo<(CardVariant | null)[]>(() => {
-    const len = testimonials.length;
-    const results: (CardVariant | null)[] = [];
-    for (let offset = -1; offset <= 1; offset++) {
-      const idx = (activeIndex + offset + len) % len;
-      if (offset === -1) results.push("left");
-      else if (offset === 0) results.push("center");
-      else results.push("right");
-    }
-    return results;
-  }, [activeIndex]);
-
-  const visibleItems = useMemo(() => {
-    const len = testimonials.length;
-    const indices = [
-      (activeIndex - 1 + len) % len,
-      activeIndex,
-      (activeIndex + 1) % len,
-    ];
-    return indices.map((idx, i) => ({
-      testimonial: testimonials[idx],
-      variant: variants[i] as CardVariant,
-      isActive: i === 1,
-    }));
-  }, [activeIndex, variants]);
-
-  const step = (from: number) => {
-    if (hovered) return;
-
-    const elapsed = performance.now() - from;
-    const duration = Math.min(elapsed, CYCLE_MS);
-    const remaining = CYCLE_MS - duration;
-
-    clearIntervalTimer();
-    intervalRef.current = window.setTimeout(() => {
+    const interval = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % testimonials.length);
-    }, remaining);
-  };
+    }, AUTO_PLAY_MS);
 
-  useEffect(() => {
-    if (hovered) {
-      clearAllTimers();
-      return;
-    }
+    return () => clearInterval(interval);
+  }, [paused]);
 
-    const start = performance.now();
-    startRef.current = start;
+  const prevIndex =
+    (activeIndex - 1 + testimonials.length) % testimonials.length;
 
-    function tick(now: number) {
-      if (hovered) return;
-      const elapsed = now - start;
+  const nextIndex =
+    (activeIndex + 1) % testimonials.length;
 
-      if (elapsed >= CYCLE_MS) {
-        setActiveIndex((prev) => (prev + 1) % testimonials.length);
-        rafRef.current = requestAnimationFrame(tick);
-      } else {
-        rafRef.current = requestAnimationFrame(tick);
-      }
-    }
-
-    rafRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      clearAllTimers();
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [hovered, activeIndex]);
-
-  useEffect(() => {
-    activeIndexRef.current = activeIndex;
-  }, [activeIndex]);
-
-  useEffect(() => () => clearAllTimers(), []);
+  const visibleCards = [
+    {
+      ...testimonials[prevIndex],
+      position: "left",
+    },
+    {
+      ...testimonials[activeIndex],
+      position: "center",
+    },
+    {
+      ...testimonials[nextIndex],
+      position: "right",
+    },
+  ];
 
   return (
-    <section className="w-full">
-      <div className="mx-auto max-w-3xl">
-        <div className="relative h-[420px]">
-          {visibleItems.map(({ testimonial, variant, isActive }, idx) => (
-            <TestimonialCard
-              key={`${testimonial.name}-${variant}`}
-              testimonial={testimonial}
-              variant={variant}
-              isActive={isActive}
-            />
-          ))}
+    <section className="w-full py-20">
+      <div className="mx-auto max-w-6xl px-6">
+        <div
+          className="relative h-[430px]"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
+          <AnimatePresence mode="popLayout">
+            {visibleCards.map((testimonial) => {
+              const Icon = testimonial.icon;
+
+              const positionStyles = {
+                left: {
+                  x: -220,
+                  scale: 0.92,
+                  opacity: 0.45,
+                  zIndex: 10,
+                },
+                center: {
+                  x: 0,
+                  scale: 1,
+                  opacity: 1,
+                  zIndex: 30,
+                },
+                right: {
+                  x: 220,
+                  scale: 0.92,
+                  opacity: 0.45,
+                  zIndex: 10,
+                },
+              };
+
+              const style =
+                positionStyles[
+                  testimonial.position as keyof typeof positionStyles
+                ];
+
+              return (
+                <motion.div
+                  key={testimonial.name}
+                  className="absolute left-1/2 top-0"
+                  initial={false}
+                  animate={{
+                    x: style.x,
+                    scale: style.scale,
+                    opacity: style.opacity,
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 180,
+                    damping: 22,
+                    mass: 1,
+                  }}
+                  style={{
+                    zIndex: style.zIndex,
+                  }}
+                >
+                  <div className="-translate-x-1/2">
+                    <div
+                      className={`
+                        w-[360px]
+                        rounded-3xl
+                        border
+                        border-border/50
+                        bg-card
+                        p-6
+                        shadow-xl
+                        backdrop-blur
+                      `}
+                    >
+                      <div className="mb-5">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+                          <Icon className="h-5 w-5" />
+                        </div>
+                      </div>
+
+                      <p className="text-base leading-7 text-foreground/80">
+                        "{testimonial.quote}"
+                      </p>
+
+                      <div className="mt-6 flex items-center gap-3">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-sm font-semibold">
+                          {testimonial.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </div>
+
+                        <div>
+                          <div className="font-medium">
+                            {testimonial.name}
+                          </div>
+
+                          <div className="text-sm text-muted-foreground">
+                            {testimonial.title}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+
+          <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 gap-2">
+            {testimonials.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setActiveIndex(idx)}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  idx === activeIndex
+                    ? "w-8 bg-foreground"
+                    : "w-2 bg-foreground/20"
+                }`}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>
   );
-};
-
-export default Testimonials;
+}
