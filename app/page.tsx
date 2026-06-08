@@ -26,7 +26,7 @@ export default async function Home() {
           <Testimonials />
         </section>
 
-        <section className="w-full pt-2 lg:w-[440px] lg:pt-10">
+        <section className="w-full pt-2 lg:w-110 lg:pt-10">
           <SignupCard />
         </section>
       </main>

@@ -8,7 +8,7 @@ const LandingPageHeader = async () => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur">
-      <nav className="mx-auto flex w-full max-w-[1400px] items-center justify-between px-4 py-4 sm:px-6">
+      <nav className="mx-auto flex w-full max-w-350 items-center justify-between px-4 py-2 sm:px-6">
         <Link
           href="/"
           className="flex items-center gap-2 font-semibold tracking-tight"

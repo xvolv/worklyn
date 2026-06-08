@@ -45,7 +45,7 @@ export default function Testimonials() {
     <section className="w-full py-20">
       <div className="mx-auto max-w-6xl px-6">
         <div
-          className="relative h-[430px]"
+          className="relative h-107.5"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
@@ -102,7 +102,7 @@ export default function Testimonials() {
                   <div className="-translate-x-1/2">
                     <div
                       className={`
-                        w-[360px]
+                        w-90
                         rounded-3xl
                         border
                         border-border/50
