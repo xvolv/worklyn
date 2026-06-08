@@ -3,30 +3,75 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { testimonials } from "@/components/landing/testimonialsData";
 
-const SLIDE_DURATION_MS = 850;
-const SLIDE_INTERVAL_MS = 4200;
+const CYCLE_MS = 4000;
+const TRANSITION_MS = 900;
 
-const START_TRANSFORM = "translateX(0%)";
-const END_TRANSFORM = "translateX(-50%)";
+type CardVariant = "left" | "center" | "right";
+
+type AngleConfig = {
+  rotate: string;
+  scale: string;
+  x: string;
+  z: number;
+};
+
+const variantAngles: Record<CardVariant, AngleConfig> = {
+  left: { rotate: "-6deg", scale: "0.92", x: "-18%", z: 20 },
+  center: { rotate: "0deg", scale: "1", x: "0%", z: 60 },
+  right: { rotate: "6deg", scale: "0.92", x: "18%", z: 20 },
+};
 
 const TestimonialCard = ({
-  quote,
-  name,
-  title,
+  testimonial,
+  variant,
+  isActive,
 }: {
-  quote: string;
-  name: string;
-  title: string;
+  testimonial: (typeof testimonials)[number];
+  variant: CardVariant;
+  isActive: boolean;
 }) => {
-  return (
-    <div className="p-6">
-      <p className="text-sm leading-6 text-foreground/80">“{quote}”</p>
+  const angles = variantAngles[variant];
 
-      <div className="mt-6 flex items-center gap-3">
-        <div className="h-10 w-10 rounded-full bg-muted" />
-        <div className="leading-tight">
-          <div className="text-sm font-medium">{name}</div>
-          <div className="text-xs text-muted-foreground">{title}</div>
+  const baseRing =
+    variant === "center"
+      ? "ring-2 ring-foreground/10"
+      : "ring-1 ring-foreground/5";
+
+  return (
+    <div
+      className="absolute top-0 left-0 w-full"
+      style={{
+        transform: `translateX(${angles.x}) rotate(${angles.rotate}) scale(${angles.scale})`,
+        zIndex: angles.z,
+        transition: isActive
+          ? `transform ${TRANSITION_MS}ms cubic-bezier(0.25, 0.8, 0.25, 1), opacity ${TRANSITION_MS}ms ease`
+          : "none",
+        opacity: isActive ? 1 : 0.6,
+        transformOrigin: "center top",
+        pointerEvents: isActive ? "auto" : "none",
+      }}
+    >
+      <div
+        className={`w-72 rounded-3xl bg-card p-5 shadow-lg ${baseRing}`}
+      >
+        <div className="mb-3 text-2xl">{testimonial.emoji}</div>
+        <p className="text-sm leading-relaxed text-foreground/80">
+          "{testimonial.quote}"
+        </p>
+
+        <div className="mt-5 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold">
+            {testimonial.name
+              .split(" ")
+              .map((n) => n[0])
+              .join("")}
+          </div>
+          <div className="leading-tight">
+            <div className="text-sm font-semibold">{testimonial.name}</div>
+            <div className="text-xs text-muted-foreground">
+              {testimonial.title}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -35,22 +80,12 @@ const TestimonialCard = ({
 
 const Testimonials = () => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [incomingIndex, setIncomingIndex] = useState(1);
-  const [animating, setAnimating] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const [trackTransform, setTrackTransform] = useState(START_TRANSFORM);
-  const [transitionEnabled, setTransitionEnabled] = useState(true);
 
   const intervalRef = useRef<number | null>(null);
-  const timeoutRef = useRef<number | null>(null);
   const activeIndexRef = useRef(0);
-  const animatingRef = useRef(false);
-
-  const startTransform = useMemo(() => START_TRANSFORM, []);
-  const endTransform = useMemo(() => END_TRANSFORM, []);
-
-  const active = testimonials[activeIndex % testimonials.length];
-  const incoming = testimonials[incomingIndex % testimonials.length];
+  const rafRef = useRef<number>(0);
+  const startRef = useRef(0);
 
   const clearIntervalTimer = () => {
     if (intervalRef.current) {
@@ -61,113 +96,98 @@ const Testimonials = () => {
 
   const clearAllTimers = () => {
     clearIntervalTimer();
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
   };
 
-  const step = () => {
-    if (animatingRef.current) return;
+  const variants = useMemo<(CardVariant | null)[]>(() => {
+    const len = testimonials.length;
+    const results: (CardVariant | null)[] = [];
+    for (let offset = -1; offset <= 1; offset++) {
+      const idx = (activeIndex + offset + len) % len;
+      if (offset === -1) results.push("left");
+      else if (offset === 0) results.push("center");
+      else results.push("right");
+    }
+    return results;
+  }, [activeIndex]);
 
-    const next = (activeIndexRef.current + 1) % testimonials.length;
-    setIncomingIndex(next);
-    setAnimating(true);
-    setTransitionEnabled(true);
-    setTrackTransform(endTransform);
+  const visibleItems = useMemo(() => {
+    const len = testimonials.length;
+    const indices = [
+      (activeIndex - 1 + len) % len,
+      activeIndex,
+      (activeIndex + 1) % len,
+    ];
+    return indices.map((idx, i) => ({
+      testimonial: testimonials[idx],
+      variant: variants[i] as CardVariant,
+      isActive: i === 1,
+    }));
+  }, [activeIndex, variants]);
 
-    timeoutRef.current = window.setTimeout(() => {
-      setActiveIndex(next);
-      setIncomingIndex((next + 1) % testimonials.length);
-      setAnimating(false);
-      setTransitionEnabled(false);
-      setTrackTransform(startTransform);
-    }, SLIDE_DURATION_MS);
+  const step = (from: number) => {
+    if (hovered) return;
+
+    const elapsed = performance.now() - from;
+    const duration = Math.min(elapsed, CYCLE_MS);
+    const remaining = CYCLE_MS - duration;
+
+    clearIntervalTimer();
+    intervalRef.current = window.setTimeout(() => {
+      setActiveIndex((prev) => (prev + 1) % testimonials.length);
+    }, remaining);
   };
 
   useEffect(() => {
-    setIncomingIndex((activeIndex + 1) % testimonials.length);
-  }, [activeIndex]);
+    if (hovered) {
+      clearAllTimers();
+      return;
+    }
+
+    const start = performance.now();
+    startRef.current = start;
+
+    function tick(now: number) {
+      if (hovered) return;
+      const elapsed = now - start;
+
+      if (elapsed >= CYCLE_MS) {
+        setActiveIndex((prev) => (prev + 1) % testimonials.length);
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    }
+
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      clearAllTimers();
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [hovered, activeIndex]);
 
   useEffect(() => {
     activeIndexRef.current = activeIndex;
   }, [activeIndex]);
 
-  useEffect(() => {
-    animatingRef.current = animating;
-  }, [animating]);
-
-  useEffect(() => {
-    if (!animating) {
-      setTrackTransform(startTransform);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startTransform]);
-
-  useEffect(() => {
-    if (!hovered) {
-      clearAllTimers();
-      return;
-    }
-
-    clearIntervalTimer();
-    intervalRef.current = window.setInterval(step, SLIDE_INTERVAL_MS);
-    return clearIntervalTimer;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hovered, activeIndex]);
-
-  useEffect(() => {
-    return () => clearAllTimers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => () => clearAllTimers(), []);
 
   return (
-    <div className="max-w-xl pt-8">
-      <div
-        className="relative overflow-hidden rounded-none bg-card shadow-sm ring-1 ring-border"
-        onPointerEnter={() => setHovered(true)}
-        onPointerLeave={() => setHovered(false)}
-      >
-        <div
-          className={
-            "pointer-events-none absolute inset-0 flex will-change-transform"
-          }
-          style={{
-            width: "200%",
-            height: "100%",
-            transform: trackTransform,
-            transitionProperty: "transform",
-            transitionDuration: transitionEnabled
-              ? `${SLIDE_DURATION_MS}ms`
-              : "0ms",
-            transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.2, 1)",
-          }}
-        >
-          <div className="w-1/2">
+    <section className="w-full">
+      <div className="mx-auto max-w-3xl">
+        <div className="relative h-[420px]">
+          {visibleItems.map(({ testimonial, variant, isActive }, idx) => (
             <TestimonialCard
-              quote={active.quote}
-              name={active.name}
-              title={active.title}
+              key={`${testimonial.name}-${variant}`}
+              testimonial={testimonial}
+              variant={variant}
+              isActive={isActive}
             />
-          </div>
-          <div className="w-1/2">
-            <TestimonialCard
-              quote={incoming.quote}
-              name={incoming.name}
-              title={incoming.title}
-            />
-          </div>
-        </div>
-
-        <div className="invisible">
-          <TestimonialCard
-            quote={active.quote}
-            name={active.name}
-            title={active.title}
-          />
+          ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 
