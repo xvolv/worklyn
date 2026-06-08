@@ -274,7 +274,15 @@ const SignupCard = () => {
           {loading ? "Creating account..." : "Sign up"}
           {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
         </Button>
-
+        <p className="text-sm text-end text-muted-foreground">
+          Already have an account?{" "}
+          <Link
+            href="/signin"
+            className="font-medium text-black underline-offset-4 hover:underline"
+          >
+            Login
+          </Link>
+        </p>
         {/* Rest of the form (OR divider + Google button + legal text) remains the same */}
         <div className="flex items-center gap-3 py-1">
           <div className="h-px flex-1 bg-border" />

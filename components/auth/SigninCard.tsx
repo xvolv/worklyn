@@ -198,6 +198,7 @@ const SigninCard = () => {
           >
             Sign up
           </Link>
+          
         </p>
       </form>
     </div>

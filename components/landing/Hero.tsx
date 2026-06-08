@@ -10,7 +10,7 @@ const Hero = () => {
       </h1>
 
       <p className="max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
-        Join 10,000+ teams using Worklyn to centralize their creative
+        Join teams using Worklyn to centralize their creative
         operations, technical documentation, and strategic roadmaps.
       </p>
     </div>
