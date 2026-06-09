@@ -388,7 +388,7 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [chatHistory, setChatHistory] = useState<Array<{ role: "user" | "model"; content: string }>>([
-    { role: "model", content: "Hi! I'm your AI Project Copilot. I can analyze milestones, task workloads, estimate hours, and alert you of project health risks. Ask me anything about this project!" }
+    { role: "model", content: "Hi! I'm Worklyn, your AI project assistant. I can analyze milestones, task workloads, estimate hours, and alert you of project health risks. Ask me anything about this project!" }
   ]);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
@@ -571,10 +571,10 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsAssistantOpen(true)}
-            className="flex h-9 items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 px-4 text-xs font-bold text-white shadow-md shadow-indigo-600/10 hover:opacity-95 hover:shadow-indigo-600/20 transition-all border border-indigo-500/20"
+            className="flex h-9 items-center gap-2 rounded-full border border-zinc-300 bg-zinc-100 px-4 text-xs font-bold text-zinc-800 transition-all hover:bg-zinc-200/80 shadow-sm"
           >
-            <Sparkles className="h-3.5 w-3.5" />
-            AI Copilot
+            <Sparkles className="h-3.5 w-3.5 text-zinc-600" />
+            Worklyn
           </button>
 
           <div className="flex items-center bg-gray-100 rounded-full p-1 border border-gray-200/60 shadow-sm">
@@ -1033,11 +1033,11 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
               {/* Drawer Header */}
               <div className="p-5 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50">
-                    <Sparkles className="h-[18px] w-[18px] text-indigo-600" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 border border-zinc-200">
+                    <Sparkles className="h-[18px] w-[18px] text-zinc-600" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-gray-900">Project Copilot</h3>
+                    <h3 className="text-sm font-bold text-gray-900">Worklyn</h3>
                     <p className="text-[10px] text-gray-500">Real-time health & risk analyst</p>
                   </div>
                 </div>
@@ -1060,10 +1060,10 @@ const ProjectBoard = ({ project: initialProject, currentUserId }: ProjectBoardPr
                   >
                     <div
                       className={`h-7 w-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold ${
-                        msg.role === "user" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700"
+                        msg.role === "user" ? "bg-indigo-600 text-white" : "bg-zinc-100 border border-zinc-200 text-zinc-700"
                       }`}
                     >
-                      {msg.role === "user" ? "U" : "AI"}
+                      {msg.role === "user" ? "U" : "W"}
                     </div>
                     <div
                       className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${

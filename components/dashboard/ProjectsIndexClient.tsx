@@ -74,10 +74,10 @@ export default function ProjectsIndexClient({ projects: initialProjects }: Proje
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsAIPlannerOpen(true)}
-              className="flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 px-6 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 transition-all hover:opacity-95 hover:shadow-indigo-600/30"
+              className="flex h-11 items-center gap-2 rounded-xl border border-zinc-300/80 bg-zinc-100 px-6 text-sm font-bold text-zinc-800 transition-all hover:bg-zinc-200/80 hover:border-zinc-400/80"
             >
-              <Sparkles className="h-4 w-4" />
-              Plan with AI
+              <Sparkles className="h-4 w-4 text-zinc-600" />
+              Plan with Worklyn
             </button>
             <button
               onClick={() => setIsProjectModalOpen(true)}
@@ -99,10 +99,10 @@ export default function ProjectsIndexClient({ projects: initialProjects }: Proje
             <div className="mt-6 flex items-center gap-3">
               <button
                 onClick={() => setIsAIPlannerOpen(true)}
-                className="flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 px-6 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 transition-all hover:opacity-95 hover:shadow-indigo-600/30"
+                className="flex h-11 items-center gap-2 rounded-xl border border-zinc-300/80 bg-zinc-100 px-6 text-sm font-bold text-zinc-800 transition-all hover:bg-zinc-200/80 hover:border-zinc-400/80"
               >
-                <Sparkles className="h-4 w-4" />
-                Plan with AI
+                <Sparkles className="h-4 w-4 text-zinc-600" />
+                Plan with Worklyn
               </button>
               <button
                 onClick={() => setIsProjectModalOpen(true)}

@@ -112,7 +112,7 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
   const [activeProjectMenu, setActiveProjectMenu] = useState<string | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<{ id: string; name: string } | null>(null);
   const [isDeletingProject, setIsDeletingProject] = useState(false);
-  
+
   const [projectForTask, setProjectForTask] = useState<{ id: string; name: string; slug: string } | null>(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
 
@@ -147,7 +147,7 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete workspace");
-      
+
       router.push("/dashboard");
       router.refresh();
     } catch (error) {
@@ -184,7 +184,7 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to leave workspace");
-      
+
       router.push("/dashboard");
       router.refresh();
     } catch (error) {
@@ -203,16 +203,15 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
 
     return (
       <div key={ws.id} className="relative">
-    
+
         <div className="group flex w-full items-center justify-between rounded-lg hover:bg-muted/50 transition-colors">
           {/* Workspace header left / click to expand */}
           <button
             onClick={() => toggleExpand(ws.id)}
-            className={`flex flex-1 items-center gap-2 px-2 py-1.5 text-sm font-semibold transition-colors focus:outline-none ${
-              isActiveWs
-                ? "text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            className={`flex flex-1 items-center gap-2 px-2 py-1.5 text-sm font-semibold transition-colors focus:outline-none ${isActiveWs
+              ? "text-foreground"
+              : "text-muted-foreground hover:text-foreground"
+              }`}
           >
             {isExpanded ? (
               <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -233,9 +232,8 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
                 e.stopPropagation();
                 setActiveMenu(activeMenu === ws.id ? null : ws.id);
               }}
-              className={`rounded-md p-1 transition-colors opacity-50 hover:bg-muted-foreground/10 hover:text-foreground ${
-                activeMenu === ws.id ? "text-foreground bg-muted-foreground/10" : "text-muted-foreground opacity-0 group-hover:opacity-100"
-              }`}
+              className={`rounded-md p-1 transition-colors opacity-50 hover:bg-muted-foreground/10 hover:text-foreground ${activeMenu === ws.id ? "text-foreground bg-muted-foreground/10" : "text-muted-foreground opacity-0 group-hover:opacity-100"
+                }`}
             >
               <MoreHorizontal className="h-4 w-4" />
             </button>
@@ -243,8 +241,8 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
             {/* Dropdown Menu */}
             {activeMenu === ws.id && (
               <>
-                <div 
-                  className="fixed inset-0 z-40" 
+                <div
+                  className="fixed inset-0 z-40"
                   onClick={(e) => {
                     e.stopPropagation();
                     setActiveMenu(null);
@@ -310,11 +308,10 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
           <div className="ml-5 border-l border-border/60 pl-2 space-y-0.5 py-1">
             <Link
               href={`/w/${ws.slug}/dashboard`}
-              className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors ${
-                pathname === `/w/${ws.slug}/dashboard`
-                  ? "bg-indigo-50 text-indigo-700"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
+              className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors ${pathname === `/w/${ws.slug}/dashboard`
+                ? "bg-indigo-50 text-indigo-700"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
             >
               <Activity className="h-3.5 w-3.5 shrink-0" />
               Workspace Overview
@@ -324,11 +321,10 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
             <div className="flex items-center justify-between px-2 pt-2 pb-0.5">
               <Link
                 href={`/w/${ws.slug}/projects`}
-                className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                  pathname === `/w/${ws.slug}/projects`
-                    ? "text-indigo-600"
-                    : "text-muted-foreground/70 hover:text-muted-foreground"
-                }`}
+                className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${pathname === `/w/${ws.slug}/projects`
+                  ? "text-indigo-600"
+                  : "text-muted-foreground/70 hover:text-muted-foreground"
+                  }`}
               >
                 Projects
               </Link>
@@ -348,16 +344,19 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
                 <div key={proj.id} className="group relative flex items-center justify-between rounded-md transition-colors hover:bg-muted">
                   <Link
                     href={`/w/${ws.slug}/projects/${proj.id}`}
-                    className={`flex flex-1 items-center gap-2 px-2 py-1.5 text-[13px] font-medium transition-colors ${
-                      pathname === `/w/${ws.slug}/projects/${proj.id}`
-                        ? "bg-indigo-50 text-indigo-700 rounded-md"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
+                    className={`flex flex-1 items-center gap-2 px-2 py-1.5 text-[13px] font-medium transition-colors ${pathname === `/w/${ws.slug}/projects/${proj.id}`
+                      ? "bg-indigo-50 text-indigo-700 rounded-md"
+                      : "text-muted-foreground hover:text-foreground"
+                      }`}
                   >
                     <FolderKanban className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">{proj.name}</span>
+                    {/* make the name truncate and shorten */}
+                    {/* <span className=" truncate w-150 text-wrap">{proj.name}</span> */}
+                    <span className="inline-block w-[240px] line-clamp-2 break-words text-wrap">
+                      {proj.name}
+                    </span>
                   </Link>
-                  
+
                   {/* Project 3-dots Menu (Only for Owners) */}
                   {ws.role === "OWNER" && (
                     <div className="relative pr-1">
@@ -367,17 +366,16 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
                           e.stopPropagation();
                           setActiveProjectMenu(activeProjectMenu === proj.id ? null : proj.id);
                         }}
-                        className={`rounded hover:bg-muted-foreground/10 p-1 ${
-                          activeProjectMenu === proj.id ? "text-foreground bg-muted-foreground/10" : "text-muted-foreground opacity-0 group-hover:opacity-100"
-                        }`}
+                        className={`rounded hover:bg-muted-foreground/10 p-1 ${activeProjectMenu === proj.id ? "text-foreground bg-muted-foreground/10" : "text-muted-foreground opacity-0 group-hover:opacity-100"
+                          }`}
                       >
                         <MoreHorizontal className="h-3 w-3" />
                       </button>
 
                       {activeProjectMenu === proj.id && (
                         <>
-                          <div 
-                            className="fixed inset-0 z-40" 
+                          <div
+                            className="fixed inset-0 z-40"
                             onClick={(e) => {
                               e.stopPropagation();
                               setActiveProjectMenu(null);
@@ -426,27 +424,25 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
 
             <Link
               href={`/w/${ws.slug}/members`}
-              className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors ${
-                pathname === `/w/${ws.slug}/members`
-                  ? "bg-indigo-50 text-indigo-700"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
+              className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors ${pathname === `/w/${ws.slug}/members`
+                ? "bg-indigo-50 text-indigo-700"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
             >
               <Users className="h-3.5 w-3.5 shrink-0" />
               Members
             </Link>
 
-                    <Link
-                      href={`/w/${ws.slug}/chat`}
-                      className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors ${
-                        pathname === `/w/${ws.slug}/chat`
-                          ? "bg-indigo-50 text-indigo-700"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }`}
-                    >
-                      <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                      Chat
-                    </Link>
+            <Link
+              href={`/w/${ws.slug}/chat`}
+              className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors ${pathname === `/w/${ws.slug}/chat`
+                ? "bg-indigo-50 text-indigo-700"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+            >
+              <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+              Chat
+            </Link>
           </div>
         )}
       </div>
@@ -463,9 +459,8 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-30 flex flex-col border-r border-border bg-white ${
-          isDragging ? "" : "transition-transform duration-300 ease-in-out"
-        } ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-30 flex flex-col border-r border-border bg-white ${isDragging ? "" : "transition-transform duration-300 ease-in-out"
+          } ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
         style={{ width: `${width}px` }}
       >
         {/* Logo */}
@@ -482,7 +477,7 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
               <div className="relative left-24 w-16 border  border-gray-500 bg-red-500 text-red-500"></div>
             </span>
           </Link>
-        
+
           <button
             onClick={close}
             className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
@@ -495,22 +490,20 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
         <nav className="px-3 space-y-0.5 pb-2">
           <Link
             href="/dashboard"
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              pathname === "/dashboard"
-                ? "bg-gray-50 text-gray-700"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${pathname === "/dashboard"
+              ? "bg-gray-50 text-gray-700"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
           >
             <LayoutDashboard className="h-[18px] w-[18px] shrink-0" />
             Overview
           </Link>
           <Link
             href="/tasks"
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              pathname === "/tasks"
-                ? "bg-indigo-50 text-indigo-700"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${pathname === "/tasks"
+              ? "bg-indigo-50 text-indigo-700"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
           >
             <CheckSquare className="h-[18px] w-[18px] shrink-0" />
             My Tasks
@@ -519,7 +512,7 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
 
         {/* Workspaces VSCode Layout */}
         <div className="flex-1 overflow-y-auto w-full flex flex-col custom-scrollbar">
-          
+
           {/* OWN WORKSPACES */}
           {ownWorkspaces.length > 0 && (
             <div className="flex flex-col border-t border-border">
@@ -546,7 +539,7 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
                   <Plus className="h-3 w-3" />
                 </Link>
               </button>
-              
+
               {showOwnWorkspaces && (
                 <div className="px-3 py-2 space-y-1 bg-white">
                   {ownWorkspaces.map(renderWorkspace)}
@@ -573,7 +566,7 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
                   </span>
                 </div>
               </button>
-              
+
               {showJoinedWorkspaces && (
                 <div className="px-3 py-2 space-y-1 bg-white">
                   {joinedWorkspaces.map(renderWorkspace)}
@@ -581,7 +574,7 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
               )}
             </div>
           )}
-          
+
           {/* Empty Space Filler (to push items up like VSCode) */}
           <div className="flex-1 bg-white border-t border-border" />
         </div>
@@ -669,22 +662,20 @@ const DashboardSidebar = ({ workspaces, invitations: invitationsProp, currentUse
 
           <Link
             href="/settings"
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              pathname === "/settings"
-                ? "bg-indigo-50 text-indigo-700"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${pathname === "/settings"
+              ? "bg-indigo-50 text-indigo-700"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
           >
             <Settings className="h-[18px] w-[18px] shrink-0" />
             Settings
           </Link>
           <Link
             href="/help"
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              pathname === "/help"
-                ? "bg-indigo-50 text-indigo-700"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${pathname === "/help"
+              ? "bg-indigo-50 text-indigo-700"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
           >
             <HelpCircle className="h-[18px] w-[18px] shrink-0" />
             Help & Support

@@ -289,12 +289,12 @@ export default function AIProjectPlannerModal({
           {/* Header */}
           <div className="flex items-center justify-between border-b border-border px-6 py-4 bg-gray-50/50">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 shadow-md shadow-indigo-200">
-                <Sparkles className="h-[18px] w-[18px] text-white" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-100 border border-zinc-200">
+                <Sparkles className="h-[18px] w-[18px] text-zinc-600" />
               </div>
               <div>
                 <h2 className="text-base font-bold text-foreground">
-                  {step === "PREVIEW" ? "Review Project Plan" : "Plan Project with AI"}
+                  {step === "PREVIEW" ? "Review Project Plan" : "Plan Project with Worklyn"}
                 </h2>
                 <p className="text-xs text-muted-foreground">
                   Powered by Gemini for {workspace.name}
@@ -388,9 +388,9 @@ export default function AIProjectPlannerModal({
                     <button
                       type="submit"
                       disabled={!prompt.trim()}
-                      className="flex h-10 items-center gap-2 rounded-xl bg-indigo-600 px-6 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 disabled:opacity-50"
+                      className="flex h-10 items-center gap-2 rounded-xl border border-zinc-300/80 bg-zinc-100 px-6 text-sm font-bold text-zinc-800 transition-all hover:bg-zinc-200/80 hover:border-zinc-400/80 disabled:opacity-50"
                     >
-                      <Sparkles className="h-4 w-4" />
+                      <Sparkles className="h-4 w-4 text-zinc-650" />
                       Generate Plan
                     </button>
                   </div>
@@ -406,16 +406,16 @@ export default function AIProjectPlannerModal({
                   exit={{ opacity: 0 }}
                   className="flex flex-col items-center justify-center py-12"
                 >
-                  <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-indigo-50">
-                    <div className="absolute inset-0 rounded-full border-4 border-indigo-600/20 animate-pulse" />
-                    <Loader2 className="h-10 w-10 text-indigo-600 animate-spin" />
+                  <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-zinc-50 border border-zinc-200">
+                    <div className="absolute inset-0 rounded-full border-4 border-zinc-300/20 animate-pulse" />
+                    <Loader2 className="h-10 w-10 text-zinc-500 animate-spin" />
                   </div>
-                  <h3 className="mt-6 text-lg font-bold text-gray-900">AI Project Planner is thinking...</h3>
-                  <p className="mt-2 text-sm text-indigo-600 font-semibold animate-pulse">
+                  <h3 className="mt-6 text-lg font-bold text-gray-900">Worklyn is thinking...</h3>
+                  <p className="mt-2 text-sm text-zinc-600 font-semibold animate-pulse">
                     {loadingStepText}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground max-w-xs text-center">
-                    Gemini is parsing your prompt to draft milestones, design workflows, and estimate project tasks.
+                    Worklyn is parsing your prompt to draft milestones, design workflows, and estimate project tasks.
                   </p>
                 </motion.div>
               )}
