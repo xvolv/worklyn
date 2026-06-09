@@ -260,7 +260,7 @@ const SignupCard = () => {
 
         <Button
           type="submit"
-          className="h-11 w-full rounded-none bg-indigo-600 text-white shadow-sm hover:bg-indigo-700/90"
+          className="h-11 w-full rounded-none bg-indigo-600 text-white shadow-sm hover:bg-indigo-700/90 hover:cursor-pointer"
           disabled={
             !!passwordStrengthError ||
             !!passwordMatchError ||
@@ -278,7 +278,7 @@ const SignupCard = () => {
           Already have an account?{" "}
           <Link
             href="/signin"
-            className="font-medium text-black underline-offset-4 hover:underline"
+            className="font-medium text-black underline-offset-4 hover:underline hover:cursor-pointer"
           >
             Login
           </Link>
@@ -293,7 +293,7 @@ const SignupCard = () => {
         <Button
           type="button"
           variant="outline"
-          className="h-11 w-full rounded-none bg-muted/60 hover:bg-muted"
+          className="h-11 w-full rounded-none bg-muted/60 hover:bg-muted hover:cursor-pointer"
           disabled={loading}
           onClick={handleGoogleSignUp}
         >

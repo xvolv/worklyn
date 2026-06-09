@@ -1,174 +1,167 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { testimonials } from "@/components/landing/testimonialsData";
 
-const SLIDE_DURATION_MS = 850;
-const SLIDE_INTERVAL_MS = 4200;
+const AUTO_PLAY_MS = 5000;
 
-const START_TRANSFORM = "translateX(0%)";
-const END_TRANSFORM = "translateX(-50%)";
-
-const TestimonialCard = ({
-  quote,
-  name,
-  title,
-}: {
-  quote: string;
-  name: string;
-  title: string;
-}) => {
-  return (
-    <div className="p-6">
-      <p className="text-sm leading-6 text-foreground/80">“{quote}”</p>
-
-      <div className="mt-6 flex items-center gap-3">
-        <div className="h-10 w-10 rounded-full bg-muted" />
-        <div className="leading-tight">
-          <div className="text-sm font-medium">{name}</div>
-          <div className="text-xs text-muted-foreground">{title}</div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const Testimonials = () => {
+export default function Testimonials() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [incomingIndex, setIncomingIndex] = useState(1);
-  const [animating, setAnimating] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const [trackTransform, setTrackTransform] = useState(START_TRANSFORM);
-  const [transitionEnabled, setTransitionEnabled] = useState(true);
-
-  const intervalRef = useRef<number | null>(null);
-  const timeoutRef = useRef<number | null>(null);
-  const activeIndexRef = useRef(0);
-  const animatingRef = useRef(false);
-
-  const startTransform = useMemo(() => START_TRANSFORM, []);
-  const endTransform = useMemo(() => END_TRANSFORM, []);
-
-  const active = testimonials[activeIndex % testimonials.length];
-  const incoming = testimonials[incomingIndex % testimonials.length];
-
-  const clearIntervalTimer = () => {
-    if (intervalRef.current) {
-      window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  };
-
-  const clearAllTimers = () => {
-    clearIntervalTimer();
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  };
-
-  const step = () => {
-    if (animatingRef.current) return;
-
-    const next = (activeIndexRef.current + 1) % testimonials.length;
-    setIncomingIndex(next);
-    setAnimating(true);
-    setTransitionEnabled(true);
-    setTrackTransform(endTransform);
-
-    timeoutRef.current = window.setTimeout(() => {
-      setActiveIndex(next);
-      setIncomingIndex((next + 1) % testimonials.length);
-      setAnimating(false);
-      setTransitionEnabled(false);
-      setTrackTransform(startTransform);
-    }, SLIDE_DURATION_MS);
-  };
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
-    setIncomingIndex((activeIndex + 1) % testimonials.length);
-  }, [activeIndex]);
+    if (paused) return;
 
-  useEffect(() => {
-    activeIndexRef.current = activeIndex;
-  }, [activeIndex]);
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % testimonials.length);
+    }, AUTO_PLAY_MS);
 
-  useEffect(() => {
-    animatingRef.current = animating;
-  }, [animating]);
+    return () => clearInterval(interval);
+  }, [paused]);
 
-  useEffect(() => {
-    if (!animating) {
-      setTrackTransform(startTransform);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startTransform]);
+  const prevIndex =
+    (activeIndex - 1 + testimonials.length) % testimonials.length;
 
-  useEffect(() => {
-    if (!hovered) {
-      clearAllTimers();
-      return;
-    }
+  const nextIndex =
+    (activeIndex + 1) % testimonials.length;
 
-    clearIntervalTimer();
-    intervalRef.current = window.setInterval(step, SLIDE_INTERVAL_MS);
-    return clearIntervalTimer;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hovered, activeIndex]);
-
-  useEffect(() => {
-    return () => clearAllTimers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const visibleCards = [
+    {
+      ...testimonials[prevIndex],
+      position: "left",
+    },
+    {
+      ...testimonials[activeIndex],
+      position: "center",
+    },
+    {
+      ...testimonials[nextIndex],
+      position: "right",
+    },
+  ];
 
   return (
-    <div className="max-w-xl pt-8">
-      <div
-        className="relative overflow-hidden rounded-none bg-card shadow-sm ring-1 ring-border"
-        onPointerEnter={() => setHovered(true)}
-        onPointerLeave={() => setHovered(false)}
-      >
+    <section className="w-full py-20">
+      <div className="mx-auto max-w-6xl px-6">
         <div
-          className={
-            "pointer-events-none absolute inset-0 flex will-change-transform"
-          }
-          style={{
-            width: "200%",
-            height: "100%",
-            transform: trackTransform,
-            transitionProperty: "transform",
-            transitionDuration: transitionEnabled
-              ? `${SLIDE_DURATION_MS}ms`
-              : "0ms",
-            transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.2, 1)",
-          }}
+          className="relative h-107.5"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
         >
-          <div className="w-1/2">
-            <TestimonialCard
-              quote={active.quote}
-              name={active.name}
-              title={active.title}
-            />
-          </div>
-          <div className="w-1/2">
-            <TestimonialCard
-              quote={incoming.quote}
-              name={incoming.name}
-              title={incoming.title}
-            />
-          </div>
-        </div>
+          <AnimatePresence mode="popLayout">
+            {visibleCards.map((testimonial) => {
+              const Icon = testimonial.icon;
 
-        <div className="invisible">
-          <TestimonialCard
-            quote={active.quote}
-            name={active.name}
-            title={active.title}
-          />
+              const positionStyles = {
+                left: {
+                  x: -220,
+                  scale: 0.92,
+                  opacity: 0.45,
+                  zIndex: 10,
+                },
+                center: {
+                  x: 0,
+                  scale: 1,
+                  opacity: 1,
+                  zIndex: 30,
+                },
+                right: {
+                  x: 220,
+                  scale: 0.92,
+                  opacity: 0.45,
+                  zIndex: 10,
+                },
+              };
+
+              const style =
+                positionStyles[
+                  testimonial.position as keyof typeof positionStyles
+                ];
+
+              return (
+                <motion.div
+                  key={testimonial.name}
+                  className="absolute left-1/2 top-0"
+                  initial={false}
+                  animate={{
+                    x: style.x,
+                    scale: style.scale,
+                    opacity: style.opacity,
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 180,
+                    damping: 22,
+                    mass: 1,
+                  }}
+                  style={{
+                    zIndex: style.zIndex,
+                  }}
+                >
+                  <div className="-translate-x-1/2">
+                    <div
+                      className={`
+                        w-90
+                        rounded-3xl
+                        border
+                        border-border/50
+                        bg-card
+                        p-6
+                        shadow-xl
+                        backdrop-blur
+                      `}
+                    >
+                      <div className="mb-5">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+                          <Icon className="h-5 w-5" />
+                        </div>
+                      </div>
+
+                      <p className="text-base leading-7 text-foreground/80">
+                        "{testimonial.quote}"
+                      </p>
+
+                      <div className="mt-6 flex items-center gap-3">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-sm font-semibold">
+                          {testimonial.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </div>
+
+                        <div>
+                          <div className="font-medium">
+                            {testimonial.name}
+                          </div>
+
+                          <div className="text-sm text-muted-foreground">
+                            {testimonial.title}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+
+          <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 gap-2">
+            {testimonials.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setActiveIndex(idx)}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  idx === activeIndex
+                    ? "w-8 bg-foreground"
+                    : "w-2 bg-foreground/20"
+                }`}
+              />
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   );
-};
-
-export default Testimonials;
+}

@@ -67,7 +67,7 @@ const SigninCard = () => {
   };
 
   return (
-    <div className="rounded-1xl bg-card p-6 ring-1 ring-border sm:p-8">
+    <div className="rounded-1xl bg-card px-6 ring-1 ring-border sm:p-8">
       <div className="flex flex-col items-center text-center">
         <div className=" inline-flex items-center justify-center ">
           <Link href="/">
@@ -75,7 +75,7 @@ const SigninCard = () => {
               src="/logos/logo.svg"
               alt="Worklyn"
               width={120}
-               height={120}
+              height={120}
             />
           </Link>
         </div>
@@ -198,7 +198,6 @@ const SigninCard = () => {
           >
             Sign up
           </Link>
-          
         </p>
       </form>
     </div>

@@ -147,7 +147,7 @@ const MembersPageClient = ({ members: initialMembers }: MembersPageClientProps) 
         {workspace.role === "OWNER" && (
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex h-10 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
+            className="flex h-10 items-center gap-2 rounded-lg bg-gray-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-gray-700 hover:cursor-pointer"
           >
             <UserPlus className="h-4 w-4" />
             Add Member
@@ -157,7 +157,7 @@ const MembersPageClient = ({ members: initialMembers }: MembersPageClientProps) 
 
       {/* Invite Link Card */}
       {workspace.role === "OWNER" && (
-        <div className="mt-5 flex items-center gap-3 rounded-xl border border-indigo-100 bg-indigo-50/50 px-4 py-3">
+        <div className="mt-5 flex items-center gap-3 rounded-xl border border-red-100 bg-white-50/50 px-4 py-3">
           <Link2 className="h-4 w-4 shrink-0 text-indigo-600" />
           <p className="flex-1 truncate text-sm text-indigo-700">
             <span className="font-medium">Invite link:</span>{" "}
@@ -226,10 +226,10 @@ const MembersPageClient = ({ members: initialMembers }: MembersPageClientProps) 
                 {/* Member */}
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-3">
-                    <img 
-                      src={m.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.email || m.name}`} 
-                      alt={m.name} 
-                      className="h-9 w-9 shrink-0 rounded-full object-cover shadow-sm bg-indigo-50" 
+                    <img
+                      src={m.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.email || m.name}`}
+                      alt={m.name}
+                      className="h-9 w-9 shrink-0 rounded-full object-cover shadow-sm bg-indigo-50"
                       loading="lazy"
                     />
                     <div>
@@ -265,7 +265,7 @@ const MembersPageClient = ({ members: initialMembers }: MembersPageClientProps) 
                 {/* Actions */}
                 <td className="px-5 py-3.5 text-right">
                   {isOwner && m.role !== "OWNER" ? (
-                    <button 
+                    <button
                       onClick={() => setMemberToDelete({ id: m.id, name: m.name })}
                       className="rounded-lg p-1.5 text-red-400 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                       title="Remove Member"

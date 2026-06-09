@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { FolderKanban, Plus, Clock, Users, Trash2 } from "lucide-react";
+import { FolderKanban, Plus, Clock, Users, Trash2, Sparkles } from "lucide-react";
 
 import CreateProjectModal from "./CreateProjectModal";
+import AIProjectPlannerModal from "./AIProjectPlannerModal";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import { useWorkspace } from "../layout/WorkspaceContext";
 
@@ -32,6 +33,7 @@ export default function ProjectsIndexClient({ projects: initialProjects }: Proje
   const pathname = usePathname();
   
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isAIPlannerOpen, setIsAIPlannerOpen] = useState(false);
   const [deleteData, setDeleteData] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -69,13 +71,22 @@ export default function ProjectsIndexClient({ projects: initialProjects }: Proje
           <p className="mt-1 text-sm text-gray-500">Overview of all active initiatives inside this workspace.</p>
         </div>
         {isOwner && (
-          <button
-            onClick={() => setIsProjectModalOpen(true)}
-            className="flex h-11 items-center gap-2 rounded-xl bg-indigo-600 px-6 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-700 hover:shadow-indigo-600/30"
-          >
-            <Plus className="h-4 w-4 stroke-[3]" />
-            New Project
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsAIPlannerOpen(true)}
+              className="flex h-11 items-center gap-2 rounded-xl border border-zinc-300/80 bg-zinc-100 px-6 text-sm font-bold text-zinc-800 transition-all hover:bg-zinc-200/80 hover:border-zinc-400/80"
+            >
+              <Sparkles className="h-4 w-4 text-zinc-600" />
+              Plan with Worklyn
+            </button>
+            <button
+              onClick={() => setIsProjectModalOpen(true)}
+              className="flex h-11 items-center gap-2 rounded-xl bg-gray-800 px-6 text-sm font-bold text-white shadow-lg transition-all hover:bg-gray-900"
+            >
+              <Plus className="h-4 w-4 stroke-[3]" />
+              New Project
+            </button>
+          </div>
         )}
       </div>
 
@@ -85,13 +96,22 @@ export default function ProjectsIndexClient({ projects: initialProjects }: Proje
           <h2 className="mt-5 text-xl font-bold text-gray-700">No projects yet</h2>
           <p className="mt-1 text-sm text-gray-500">Create your first project to organize the workspace.</p>
           {isOwner && (
-            <button
-              onClick={() => setIsProjectModalOpen(true)}
-              className="mt-6 flex h-11 items-center gap-2 rounded-xl bg-indigo-600 px-6 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-700 hover:shadow-indigo-600/30"
-            >
-              <Plus className="h-4 w-4 stroke-[3]" />
-              New Project
-            </button>
+            <div className="mt-6 flex items-center gap-3">
+              <button
+                onClick={() => setIsAIPlannerOpen(true)}
+                className="flex h-11 items-center gap-2 rounded-xl border border-zinc-300/80 bg-zinc-100 px-6 text-sm font-bold text-zinc-800 transition-all hover:bg-zinc-200/80 hover:border-zinc-400/80"
+              >
+                <Sparkles className="h-4 w-4 text-zinc-600" />
+                Plan with Worklyn
+              </button>
+              <button
+                onClick={() => setIsProjectModalOpen(true)}
+                className="flex h-11 items-center gap-2 rounded-xl bg-gray-800 px-6 text-sm font-bold text-white shadow-lg transition-all hover:bg-gray-900"
+              >
+                <Plus className="h-4 w-4 stroke-[3]" />
+                New Project
+              </button>
+            </div>
           )}
         </div>
       ) : (
@@ -153,6 +173,7 @@ export default function ProjectsIndexClient({ projects: initialProjects }: Proje
       )}
 
       <CreateProjectModal isOpen={isProjectModalOpen} onClose={() => setIsProjectModalOpen(false)} />
+      <AIProjectPlannerModal isOpen={isAIPlannerOpen} onClose={() => setIsAIPlannerOpen(false)} />
       
       <ConfirmDeleteModal
         isOpen={!!deleteData}
